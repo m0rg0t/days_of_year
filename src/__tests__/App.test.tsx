@@ -135,7 +135,12 @@ describe('App', () => {
 
     // mood buttons should be visible for today
     fireEvent.click(screen.getByText('🔵'));
+    fireEvent.click(screen.getByText('🟢'));
+    fireEvent.click(screen.getByText('🔴'));
+    fireEvent.click(screen.getByText('🟡'));
     fireEvent.click(screen.getByText('сброс'));
+
+    expect(setYearMock).toHaveBeenCalled();
 
     const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'фокус' } });
