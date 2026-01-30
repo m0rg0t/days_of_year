@@ -3,7 +3,7 @@ import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
 import './app.css';
 import { dateKeyForDayIndex, dayOfYear, daysInYear, downloadText } from './utils';
-import { createVkStorageWriter, loadYearFromVkStorage } from './vkStorage';
+import { loadYearBlobFromVk, createVkYearBlobWriter } from './vkYearStorage';
 import type { DayData } from './vkStorage';
 import type { Mood } from './utils';
 
@@ -46,7 +46,7 @@ export default function App() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(todayIndex);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const vkWriterRef = useRef(createVkStorageWriter());
+  const vkYearWriterRef = useRef(createVkYearBlobWriter(year));
 
   const [gridLayout, setGridLayout] = useState<{ cols: number; cell: number; gap: number }>(() => ({
     cols: 20,
@@ -61,9 +61,9 @@ export default function App() {
 
   useEffect(() => {
     // Hydrate from VK Storage first (cross-device), but keep localStorage as fallback/mirror.
-    // If VK Storage is unavailable, this simply does nothing.
+    // New strategy: store ONE key per year: doy:YYYY -> JSON blob of all days.
     (async () => {
-      const vkDays = await loadYearFromVkStorage(year);
+      const vkDays = await loadYearBlobFromVk(year);
       const hasAny = Object.keys(vkDays).length > 0;
       if (!hasAny) return;
 
@@ -149,8 +149,8 @@ export default function App() {
       saveStore(next);
 
       // 2) Best-effort sync to VK Storage (cross-device)
-      //    Debounced/coalesced to avoid rate limits.
-      vkWriterRef.current.setDay(key, nextDay);
+      //    Store a single key per year: doy:YYYY
+      vkYearWriterRef.current.setYear(next.days);
 
       return next;
     });
