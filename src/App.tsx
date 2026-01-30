@@ -50,10 +50,62 @@ export default function App() {
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
+  const [gridLayout, setGridLayout] = useState<{ cols: number; cell: number; gap: number }>(() => ({
+    cols: 20,
+    cell: 14,
+    gap: 6,
+  }));
+
   useEffect(() => {
     // VK Mini Apps init (safe to call on web too)
     bridge.send('VKWebAppInit').catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+
+    const compute = (w: number, h: number) => {
+      // Keep a bit of air: avoid touching edges on small screens
+      const pad = 4;
+      const W = Math.max(0, w - pad * 2);
+      const H = Math.max(0, h - pad * 2);
+
+      const candidates: Array<{ cols: number; cell: number; gap: number }> = [];
+
+      for (let cols = 14; cols <= 26; cols++) {
+        const rows = Math.ceil(totalDays / cols);
+
+        // dynamic gap: tighter on narrow screens
+        const gap = W < 420 ? 4 : 6;
+
+        const cellW = (W - gap * (cols - 1)) / cols;
+        const cellH = (H - gap * (rows - 1)) / rows;
+        const cell = Math.floor(Math.min(cellW, cellH));
+
+        if (cell >= 8) {
+          candidates.push({ cols, cell, gap });
+        }
+      }
+
+      // Pick the layout with the biggest dot size
+      const best = candidates.sort((a, b) => b.cell - a.cell)[0];
+      if (best) setGridLayout(best);
+    };
+
+    // Observe parent box (gridWrap) to size within available space
+    const parent = el.parentElement;
+    if (!parent) return;
+
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (!cr) return;
+      compute(cr.width, cr.height);
+    });
+
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [totalDays]);
 
   const selectedKey = dateKeyForDayIndex(year, selectedDayIndex);
   const selectedData = store.days[selectedKey] || {};
@@ -120,7 +172,18 @@ export default function App() {
       </div>
 
       <div className="gridWrap">
-        <div className="grid" ref={gridRef} aria-label="days-grid">
+        <div
+          className="grid"
+          ref={gridRef}
+          aria-label="days-grid"
+          style={
+            {
+              ['--cols' as any]: gridLayout.cols,
+              ['--cell' as any]: `${gridLayout.cell}px`,
+              ['--gap' as any]: `${gridLayout.gap}px`,
+            } as React.CSSProperties
+          }
+        >
           {Array.from({ length: totalDays }).map((_, i) => {
             const dayIndex = i + 1;
             const key = dateKeyForDayIndex(year, dayIndex);
