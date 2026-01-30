@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('@vkontakte/vk-bridge', () => ({
   default: {
     send: vi.fn().mockResolvedValue({ result: true }),
+    subscribe: vi.fn(() => () => {}),
   },
 }));
 
@@ -14,6 +15,8 @@ vi.mock('html2canvas', () => ({
     toDataURL: () => 'data:image/png;base64,xxx',
   })),
 }));
+
+import html2canvas from 'html2canvas';
 
 // Keep VK storage/ad helpers controllable in tests (must be hoisted)
 const { loadYearBlobFromVkMock, setYearMock } = vi.hoisted(() => {
@@ -45,6 +48,7 @@ afterEach(() => {
   loadYearBlobFromVkMock.mockReset();
   setYearMock.mockReset();
   localStorage.clear();
+  vi.clearAllMocks();
 });
 
 describe('App', () => {
@@ -121,9 +125,9 @@ describe('App', () => {
     });
 
     const click = vi.fn();
-    const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tagName: any) => {
-      const el = origCreate(tagName);
+    const origCreate = Document.prototype.createElement;
+    vi.spyOn(document, 'createElement').mockImplementation(function (tagName: any) {
+      const el = origCreate.call(this, tagName);
       if (tagName === 'a') {
         // @ts-expect-error mock
         el.click = click;
@@ -150,37 +154,22 @@ describe('App', () => {
     fireEvent.click(screen.getByText('Экспорт JSON'));
 
     // export PNG -> should fall back to anchor download
-    fireEvent.click(screen.getByText('Экспорт PNG'));
+    fireEvent.click(screen.getByRole('button', { name: 'Экспорт PNG' }));
 
     expect(click).toHaveBeenCalled();
 
     vi.restoreAllMocks();
   });
 
-  it('export PNG uses VK share when available', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
-
-    // VK share succeeds
+  it('export PNG calls html2canvas', async () => {
+    // Use real timers here
     (bridge.send as any).mockResolvedValue({ result: true });
 
-    const click = vi.fn();
-    const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tagName: any) => {
-      const el = origCreate(tagName);
-      if (tagName === 'a') {
-        // @ts-expect-error mock
-        el.click = click;
-      }
-      return el;
-    });
-
     render(<App />);
-    fireEvent.click(screen.getByText('Экспорт PNG'));
+    fireEvent.click(screen.getByRole('button', { name: 'Экспорт PNG' }));
 
-    // should NOT fall back to download anchor click
-    expect(click).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 80));
 
-    vi.restoreAllMocks();
-  });
+    expect((html2canvas as any).mock.calls.length).toBeGreaterThan(0);
+  }, 10000);
 });

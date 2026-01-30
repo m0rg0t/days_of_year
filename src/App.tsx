@@ -1,47 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
+
+import {
+  AdaptivityProvider,
+  AppRoot,
+  Button,
+  ConfigProvider,
+  Div,
+  Group,
+  Header,
+  Input,
+  Panel,
+  PanelHeader,
+  SimpleCell,
+  SplitCol,
+  SplitLayout,
+  View,
+} from '@vkontakte/vkui';
+
 import './app.css';
 import { dateKeyForDayIndex, dayOfYear, daysInYear, downloadText } from './utils';
 import { loadYearBlobFromVk, createVkYearBlobWriter } from './vkYearStorage';
 import type { Mood } from './utils';
 import { hideBannerAd, showBannerAd } from './vkAds';
 import type { DayData } from './vkYearStorage';
-
-type Store = {
-  version: 1;
-  year: number;
-  days: Record<string, DayData>; // key: YYYY-MM-DD
-};
-
-const STORAGE_KEY = 'days_of_year:v1';
-
-function loadStore(currentYear: number): Store {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return { version: 1, year: currentYear, days: {} };
-    }
-    const parsed = JSON.parse(raw) as Store;
-    if (!parsed || parsed.version !== 1) {
-      return { version: 1, year: currentYear, days: {} };
-    }
-    // Keep historical data even if year changes
-    return { ...parsed, year: currentYear };
-  } catch {
-    return { version: 1, year: currentYear, days: {} };
-  }
-}
-
-function saveStore(store: Store) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-}
+import { computeBestLayout } from './gridLayout';
+import { loadStore, saveStore } from './localStore';
+import type { Store } from './localStore';
+import { ExportCard } from './ExportCard';
 
 export default function App() {
   const today = useMemo(() => new Date(), []);
   const year = today.getFullYear();
   const totalDays = daysInYear(year);
   const todayIndex = dayOfYear(today); // 1-based
+
+  const [scheme, setScheme] = useState<string>('vkcom_dark');
 
   const [store, setStore] = useState<Store>(() => loadStore(year));
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(todayIndex);
@@ -59,10 +54,32 @@ export default function App() {
     // VK Mini Apps init (safe to call on web too)
     bridge.send('VKWebAppInit').catch(() => {});
 
+    // Try to detect VK scheme
+    bridge
+      .send('VKWebAppGetConfig')
+      .then((cfg: any) => {
+        const s = cfg?.scheme;
+        if (typeof s === 'string') setScheme(s);
+      })
+      .catch(() => {});
+
+    const unsub = bridge.subscribe((e) => {
+      // VKWebAppUpdateConfig may contain scheme
+      const s = (e as any)?.detail?.data?.scheme;
+      if (typeof s === 'string') setScheme(s);
+    });
+
     // Banner ad (safe to call on web too)
     showBannerAd({ layoutType: 'resize' }).catch(() => {});
 
     return () => {
+      // @vkontakte/vk-bridge returns void for subscribe; ignore if unsub isn't callable
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        (unsub as any)?.();
+      } catch {
+        // ignore
+      }
       hideBannerAd().catch(() => {});
     };
   }, []);
@@ -94,34 +111,6 @@ export default function App() {
     const el = gridRef.current;
     if (!el) return;
 
-    const compute = (w: number, h: number) => {
-      // Keep a bit of air: avoid touching edges on small screens
-      const pad = 4;
-      const W = Math.max(0, w - pad * 2);
-      const H = Math.max(0, h - pad * 2);
-
-      const candidates: Array<{ cols: number; cell: number; gap: number }> = [];
-
-      for (let cols = 14; cols <= 26; cols++) {
-        const rows = Math.ceil(totalDays / cols);
-
-        // dynamic gap: tighter on narrow screens
-        const gap = W < 420 ? 4 : 6;
-
-        const cellW = (W - gap * (cols - 1)) / cols;
-        const cellH = (H - gap * (rows - 1)) / rows;
-        const cell = Math.floor(Math.min(cellW, cellH));
-
-        if (cell >= 8) {
-          candidates.push({ cols, cell, gap });
-        }
-      }
-
-      // Pick the layout with the biggest dot size
-      const best = candidates.sort((a, b) => b.cell - a.cell)[0];
-      if (best) setGridLayout(best);
-    };
-
     // Observe parent box (gridWrap) to size within available space
     const parent = el.parentElement;
     if (!parent) return;
@@ -129,7 +118,13 @@ export default function App() {
     const ro = new ResizeObserver((entries) => {
       const cr = entries[0]?.contentRect;
       if (!cr) return;
-      compute(cr.width, cr.height);
+      setGridLayout(
+        computeBestLayout({
+          totalDays,
+          width: cr.width,
+          height: cr.height,
+        }),
+      );
     });
 
     ro.observe(parent);
@@ -140,6 +135,11 @@ export default function App() {
   const selectedData = store.days[selectedKey] || {};
 
   const isSelectedToday = selectedDayIndex === todayIndex;
+
+  const dateKeys = useMemo(
+    () => Array.from({ length: totalDays }).map((_, i) => dateKeyForDayIndex(year, i + 1)),
+    [totalDays, year],
+  );
 
   function updateDay(key: string, patch: Partial<DayData>) {
     setStore((prev) => {
@@ -170,12 +170,51 @@ export default function App() {
   }
 
   async function exportPng() {
-    if (!gridRef.current) return;
-    const canvas = await html2canvas(gridRef.current, {
+    // Render a dedicated export card (more beautiful than raw grid)
+    const host = document.createElement('div');
+    host.style.position = 'fixed';
+    host.style.left = '-99999px';
+    host.style.top = '0';
+    document.body.appendChild(host);
+
+    // Render via React by cloning DOM: simplest is to mount a temporary subtree
+    // We avoid React portals; just create a real node and let html2canvas capture.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const ReactDOM = await import('react-dom/client');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const root = (ReactDOM as any).createRoot(host);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    root.render(
+      <ExportCard
+        year={year}
+        totalDays={totalDays}
+        todayIndex={todayIndex}
+        gridLayout={gridLayout}
+        days={store.days}
+        dateKeys={dateKeys}
+      />,
+    );
+
+    // Give the browser a tick to paint
+    await new Promise((r) => setTimeout(r, 30));
+
+    const target = host.firstElementChild as HTMLElement | null;
+    if (!target) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      root.unmount();
+      host.remove();
+      return;
+    }
+
+    const canvas = await html2canvas(target, {
       backgroundColor: '#0f0f10',
       scale: 2,
     });
     const dataUrl = canvas.toDataURL('image/png');
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    root.unmount();
+    host.remove();
 
     // Try VK share dialog (optional)
     try {
@@ -201,107 +240,142 @@ export default function App() {
     downloadText(filename, JSON.stringify(store, null, 2));
   }
 
+  const left = Math.max(0, totalDays - todayIndex);
+
   return (
-    <div className="app">
-      <div className="header">
-        <h1 className="title">Дни года</h1>
-        <p className="subtitle">«Этот день — один из твоих 365.»</p>
-      </div>
+    <ConfigProvider colorScheme={scheme as any}>
+      <AdaptivityProvider>
+        <AppRoot>
+          <SplitLayout>
+            <SplitCol>
+              <View activePanel="main">
+                <Panel id="main">
+                  <PanelHeader>Дни года</PanelHeader>
 
-      <div className="gridWrap">
-        <div
-          className="grid"
-          ref={gridRef}
-          aria-label="days-grid"
-          style={
-            {
-              ['--cols' as any]: gridLayout.cols,
-              ['--cell' as any]: `${gridLayout.cell}px`,
-              ['--gap' as any]: `${gridLayout.gap}px`,
-            } as React.CSSProperties
-          }
-        >
-          {Array.from({ length: totalDays }).map((_, i) => {
-            const dayIndex = i + 1;
-            const key = dateKeyForDayIndex(year, dayIndex);
-            const data = store.days[key];
+                  <Group header={<Header>«Этот день — один из твоих 365.»</Header>}>
+                    <SimpleCell>
+                      Сегодня: {todayIndex}/{totalDays} · Осталось: {left}
+                    </SimpleCell>
+                  </Group>
 
-            const filled = dayIndex < todayIndex;
-            const todayDay = dayIndex === todayIndex;
+                  <div className="gridWrap">
+                    <div
+                      className="grid"
+                      ref={gridRef}
+                      aria-label="days-grid"
+                      style={
+                        {
+                          ['--cols' as any]: gridLayout.cols,
+                          ['--cell' as any]: `${gridLayout.cell}px`,
+                          ['--gap' as any]: `${gridLayout.gap}px`,
+                        } as React.CSSProperties
+                      }
+                    >
+                      {dateKeys.map((key, i) => {
+                        const dayIndex = i + 1;
+                        const data = store.days[key];
 
-            const cls = [
-              'day',
-              filled ? 'filled' : '',
-              todayDay ? 'today' : '',
-              data?.mood ? moodClass(data.mood) : '',
-            ]
-              .filter(Boolean)
-              .join(' ');
+                        const filled = dayIndex < todayIndex;
+                        const todayDay = dayIndex === todayIndex;
 
-            return (
-              <button
-                key={key}
-                className={cls}
-                onClick={() => setSelectedDayIndex(dayIndex)}
-                title={key}
-                aria-label={key}
-              />
-            );
-          })}
-        </div>
-      </div>
+                        const cls = [
+                          'day',
+                          filled ? 'filled' : '',
+                          todayDay ? 'today' : '',
+                          data?.mood ? moodClass(data.mood) : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ');
 
-      <div className="footer">
-        <div className="pill">
-          <strong style={{ minWidth: 96 }}>День:</strong>
-          <span>{selectedKey}</span>
-          <span className="small">({selectedDayIndex}/{totalDays})</span>
-        </div>
+                        return (
+                          <button
+                            key={key}
+                            className={cls}
+                            onClick={() => setSelectedDayIndex(dayIndex)}
+                            title={key}
+                            aria-label={key}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
 
-        {isSelectedToday ? (
-          <>
-            <div className="pill">
-              <strong style={{ minWidth: 96 }}>Настроение:</strong>
-              <div className="controlsRow">
-                <button className="btn" onClick={() => updateDay(selectedKey, { mood: 'blue' })}>🔵</button>
-                <button className="btn" onClick={() => updateDay(selectedKey, { mood: 'green' })}>🟢</button>
-                <button className="btn" onClick={() => updateDay(selectedKey, { mood: 'red' })}>🔴</button>
-                <button className="btn" onClick={() => updateDay(selectedKey, { mood: 'yellow' })}>🟡</button>
-                <button className="btn" onClick={() => updateDay(selectedKey, { mood: undefined })}>сброс</button>
-              </div>
-            </div>
+                  <Group>
+                    <Div>
+                      <div className="pill">
+                        <strong style={{ minWidth: 96 }}>День:</strong>
+                        <span>{selectedKey}</span>
+                        <span className="small">({selectedDayIndex}/{totalDays})</span>
+                      </div>
+                    </Div>
 
-            <div className="pill">
-              <strong style={{ minWidth: 96 }}>Вопрос дня:</strong>
-              <span className="small" style={{ marginRight: 8 }}>Что сегодня было важным?</span>
-              <input
-                className="input"
-                placeholder="одно слово"
-                value={selectedData.word || ''}
-                onChange={(e) => updateDay(selectedKey, { word: e.target.value })}
-              />
-            </div>
-          </>
-        ) : (
-          <div className="pill">
-            <strong style={{ minWidth: 96 }}>След:</strong>
-            <span className="small">
-              {selectedData.mood ? `настроение: ${selectedData.mood}` : 'настроение: —'}
-              {' · '}
-              {selectedData.word ? `слово: ${selectedData.word}` : 'слово: —'}
-            </span>
-          </div>
-        )}
+                    {isSelectedToday ? (
+                      <>
+                        <Group header={<Header>Настроение</Header>}>
+                          <Div className="controlsRow">
+                            <Button size="m" mode="secondary" onClick={() => updateDay(selectedKey, { mood: 'blue' })}>
+                              🔵
+                            </Button>
+                            <Button size="m" mode="secondary" onClick={() => updateDay(selectedKey, { mood: 'green' })}>
+                              🟢
+                            </Button>
+                            <Button size="m" mode="secondary" onClick={() => updateDay(selectedKey, { mood: 'red' })}>
+                              🔴
+                            </Button>
+                            <Button size="m" mode="secondary" onClick={() => updateDay(selectedKey, { mood: 'yellow' })}>
+                              🟡
+                            </Button>
+                            <Button size="m" mode="tertiary" onClick={() => updateDay(selectedKey, { mood: undefined })}>
+                              сброс
+                            </Button>
+                          </Div>
+                        </Group>
 
-        <div className="controlsRow">
-          <button className="btn primary" onClick={exportPng}>Экспорт PNG</button>
-          <button className="btn" onClick={exportJson}>Экспорт JSON</button>
-        </div>
+                        <Group header={<Header>Вопрос дня</Header>}>
+                          <Div>
+                            <div className="small" style={{ marginBottom: 8 }}>
+                              Что сегодня было важным?
+                            </div>
+                            <Input
+                              placeholder="одно слово"
+                              value={selectedData.word || ''}
+                              onChange={(e) => updateDay(selectedKey, { word: e.target.value })}
+                            />
+                          </Div>
+                        </Group>
+                      </>
+                    ) : (
+                      <Group header={<Header>След</Header>}>
+                        <Div>
+                          <div className="small">
+                            {selectedData.mood ? `настроение: ${selectedData.mood}` : 'настроение: —'}
+                            {' · '}
+                            {selectedData.word ? `слово: ${selectedData.word}` : 'слово: —'}
+                          </div>
+                        </Div>
+                      </Group>
+                    )}
 
-        <div className="small">
-          Данные хранятся локально (localStorage). Без аккаунта и без сервера.
-        </div>
-      </div>
-    </div>
+                    <Group header={<Header>Экспорт</Header>}>
+                      <Div className="controlsRow">
+                        <Button size="m" mode="primary" onClick={exportPng}>
+                          Экспорт PNG
+                        </Button>
+                        <Button size="m" mode="secondary" onClick={exportJson}>
+                          Экспорт JSON
+                        </Button>
+                      </Div>
+                      <Div className="small">
+                        Данные хранятся локально (localStorage) и в VK Storage (ключ на год).
+                      </Div>
+                    </Group>
+                  </Group>
+                </Panel>
+              </View>
+            </SplitCol>
+          </SplitLayout>
+        </AppRoot>
+      </AdaptivityProvider>
+    </ConfigProvider>
   );
 }

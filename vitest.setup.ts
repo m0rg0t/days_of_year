@@ -17,3 +17,20 @@ class ResizeObserverMock {
 
 // @ts-expect-error - test global
 globalThis.ResizeObserver = ResizeObserverMock;
+
+// VKUI relies on matchMedia
+if (!window.matchMedia) {
+  // @ts-expect-error - polyfill
+  window.matchMedia = (query: string) => {
+    return {
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    };
+  };
+}
