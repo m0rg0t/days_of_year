@@ -4,8 +4,9 @@ import html2canvas from 'html2canvas';
 import './app.css';
 import { dateKeyForDayIndex, dayOfYear, daysInYear, downloadText } from './utils';
 import { loadYearBlobFromVk, createVkYearBlobWriter } from './vkYearStorage';
-import type { DayData } from './vkStorage';
 import type { Mood } from './utils';
+import { hideBannerAd, showBannerAd } from './vkAds';
+import type { DayData } from './vkYearStorage';
 
 type Store = {
   version: 1;
@@ -57,6 +58,13 @@ export default function App() {
   useEffect(() => {
     // VK Mini Apps init (safe to call on web too)
     bridge.send('VKWebAppInit').catch(() => {});
+
+    // Banner ad (safe to call on web too)
+    showBannerAd({ layoutType: 'resize' }).catch(() => {});
+
+    return () => {
+      hideBannerAd().catch(() => {});
+    };
   }, []);
 
   useEffect(() => {

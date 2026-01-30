@@ -1,5 +1,10 @@
 import bridge from '@vkontakte/vk-bridge';
-import type { DayData } from './vkStorage';
+import type { Mood } from './utils';
+
+export type DayData = {
+  mood?: Mood;
+  word?: string;
+};
 
 const KEY_PREFIX = 'doy:'; // doy:YYYY
 
