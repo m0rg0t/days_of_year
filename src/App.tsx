@@ -3,12 +3,9 @@ import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
 import './app.css';
 import { dateKeyForDayIndex, dayOfYear, daysInYear, downloadText } from './utils';
+import { createVkStorageWriter, loadYearFromVkStorage } from './vkStorage';
+import type { DayData } from './vkStorage';
 import type { Mood } from './utils';
-
-type DayData = {
-  mood?: Mood;
-  word?: string; // one word (we don't enforce hard)
-};
 
 type Store = {
   version: 1;
@@ -49,6 +46,7 @@ export default function App() {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(todayIndex);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const vkWriterRef = useRef(createVkStorageWriter());
 
   const [gridLayout, setGridLayout] = useState<{ cols: number; cell: number; gap: number }>(() => ({
     cols: 20,
@@ -60,6 +58,29 @@ export default function App() {
     // VK Mini Apps init (safe to call on web too)
     bridge.send('VKWebAppInit').catch(() => {});
   }, []);
+
+  useEffect(() => {
+    // Hydrate from VK Storage first (cross-device), but keep localStorage as fallback/mirror.
+    // If VK Storage is unavailable, this simply does nothing.
+    (async () => {
+      const vkDays = await loadYearFromVkStorage(year);
+      const hasAny = Object.keys(vkDays).length > 0;
+      if (!hasAny) return;
+
+      setStore((prev) => {
+        const merged: Store = {
+          ...prev,
+          year,
+          days: {
+            ...prev.days,
+            ...vkDays,
+          },
+        };
+        saveStore(merged);
+        return merged;
+      });
+    })();
+  }, [year]);
 
   useEffect(() => {
     const el = gridRef.current;
@@ -114,15 +135,23 @@ export default function App() {
 
   function updateDay(key: string, patch: Partial<DayData>) {
     setStore((prev) => {
+      const nextDay: DayData = { ...(prev.days[key] || {}), ...patch };
       const next: Store = {
         ...prev,
         year,
         days: {
           ...prev.days,
-          [key]: { ...(prev.days[key] || {}), ...patch },
+          [key]: nextDay,
         },
       };
+
+      // 1) Always mirror to localStorage (fast + offline)
       saveStore(next);
+
+      // 2) Best-effort sync to VK Storage (cross-device)
+      //    Debounced/coalesced to avoid rate limits.
+      vkWriterRef.current.setDay(key, nextDay);
+
       return next;
     });
   }
