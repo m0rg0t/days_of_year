@@ -25,11 +25,11 @@ function safeParse(raw: string | undefined | null): Record<string, DayData> | nu
 
 export async function loadYearBlobFromVk(year: number): Promise<Record<string, DayData>> {
   try {
-    const res = await bridge.send('VKWebAppStorageGet', { keys: [yearKey(year)] } as any);
-    const items = (res?.keys || []) as Array<{ key: string; value: string }>;
+    const res = await bridge.send('VKWebAppStorageGet', { keys: [yearKey(year)] });
+    const items = res?.keys ?? [];
     const item = items.find((it) => it.key === yearKey(year));
     const parsed = safeParse(item?.value);
-    return parsed || {};
+    return parsed ?? {};
   } catch {
     return {};
   }
@@ -50,7 +50,7 @@ export function createVkYearBlobWriter(year: number) {
       await bridge.send('VKWebAppStorageSet', {
         key: yearKey(year),
         value: JSON.stringify(payload),
-      } as any);
+      });
     } catch {
       // ignore: localStorage remains fallback
     }

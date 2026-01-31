@@ -1,22 +1,20 @@
-import bridge from '@vkontakte/vk-bridge';
+import bridge, { BannerAdLayoutType, BannerAdLocation } from '@vkontakte/vk-bridge';
 
 export type BannerLayoutType = 'resize' | 'overlay';
 
+const LAYOUT_MAP: Record<BannerLayoutType, BannerAdLayoutType> = {
+  resize: BannerAdLayoutType.RESIZE,
+  overlay: BannerAdLayoutType.OVERLAY,
+};
+
 export async function showBannerAd(opts?: { layoutType?: BannerLayoutType }) {
   try {
-    const res = await bridge.send('VKWebAppShowBannerAd', {
-      banner_location: 'bottom',
-      layout_type: opts?.layoutType ?? 'resize',
-    } as any);
-    return res as {
-      result: boolean;
-      banner_width?: number;
-      banner_height?: number;
-      banner_location?: string;
-      layout_type?: string;
-    };
+    return await bridge.send('VKWebAppShowBannerAd', {
+      banner_location: BannerAdLocation.BOTTOM,
+      layout_type: LAYOUT_MAP[opts?.layoutType ?? 'resize'],
+    });
   } catch {
-    return { result: false };
+    return { result: false as const };
   }
 }
 
