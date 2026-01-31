@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
+import { createRoot } from 'react-dom/client';
 
 import {
   AdaptivityProvider,
@@ -18,6 +19,7 @@ import {
   SplitLayout,
   View,
 } from '@vkontakte/vkui';
+import type { ColorSchemeType } from '@vkontakte/vkui';
 
 import './app.css';
 import { dateKeyForDayIndex, dayOfYear, daysInYear, downloadText } from './utils';
@@ -30,13 +32,34 @@ import { loadStore, saveStore } from './localStore';
 import type { Store } from './localStore';
 import { ExportCard } from './ExportCard';
 
+/** Map legacy VK scheme strings to VKUI ColorSchemeType. */
+function toColorScheme(scheme: string): ColorSchemeType {
+  if (scheme === 'space_gray' || scheme === 'vkcom_dark') return 'dark';
+  if (scheme === 'bright_light' || scheme === 'vkcom_light') return 'light';
+  return 'dark';
+}
+
+function moodClass(mood?: Mood) {
+  if (!mood) return '';
+  return `mood-${mood}`;
+}
+
+/** CSS custom properties for the grid layout. */
+function gridCSSVars(layout: { cols: number; cell: number; gap: number }): React.CSSProperties {
+  return {
+    '--cols': layout.cols,
+    '--cell': `${layout.cell}px`,
+    '--gap': `${layout.gap}px`,
+  } as React.CSSProperties;
+}
+
 export default function App() {
   const today = useMemo(() => new Date(), []);
   const year = today.getFullYear();
   const totalDays = daysInYear(year);
   const todayIndex = dayOfYear(today); // 1-based
 
-  const [scheme, setScheme] = useState<string>('vkcom_dark');
+  const [colorScheme, setColorScheme] = useState<ColorSchemeType>('dark');
 
   const [store, setStore] = useState<Store>(() => loadStore(year));
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(todayIndex);
@@ -51,42 +74,36 @@ export default function App() {
   }));
 
   useEffect(() => {
-    // VK Mini Apps init (safe to call on web too)
     bridge.send('VKWebAppInit').catch(() => {});
 
-    // Try to detect VK scheme
     bridge
       .send('VKWebAppGetConfig')
-      .then((cfg: any) => {
-        const s = cfg?.scheme;
-        if (typeof s === 'string') setScheme(s);
+      .then((cfg) => {
+        if ('scheme' in cfg && typeof cfg.scheme === 'string') {
+          setColorScheme(toColorScheme(cfg.scheme));
+        }
       })
       .catch(() => {});
 
-    const unsub = bridge.subscribe((e) => {
-      // VKWebAppUpdateConfig may contain scheme
-      const s = (e as any)?.detail?.data?.scheme;
-      if (typeof s === 'string') setScheme(s);
-    });
+    const listener: import('@vkontakte/vk-bridge').VKBridgeSubscribeHandler = (e) => {
+      if (e.detail.type === 'VKWebAppUpdateConfig') {
+        const data = e.detail.data;
+        if ('scheme' in data && typeof data.scheme === 'string') {
+          setColorScheme(toColorScheme(data.scheme));
+        }
+      }
+    };
+    bridge.subscribe(listener);
 
-    // Banner ad (safe to call on web too)
     showBannerAd({ layoutType: 'resize' }).catch(() => {});
 
     return () => {
-      // @vkontakte/vk-bridge returns void for subscribe; ignore if unsub isn't callable
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        (unsub as any)?.();
-      } catch {
-        // ignore
-      }
+      bridge.unsubscribe(listener);
       hideBannerAd().catch(() => {});
     };
   }, []);
 
   useEffect(() => {
-    // Hydrate from VK Storage first (cross-device), but keep localStorage as fallback/mirror.
-    // New strategy: store ONE key per year: doy:YYYY -> JSON blob of all days.
     (async () => {
       const vkDays = await loadYearBlobFromVk(year);
       const hasAny = Object.keys(vkDays).length > 0;
@@ -111,7 +128,6 @@ export default function App() {
     const el = gridRef.current;
     if (!el) return;
 
-    // Observe parent box (gridWrap) to size within available space
     const parent = el.parentElement;
     if (!parent) return;
 
@@ -153,37 +169,21 @@ export default function App() {
         },
       };
 
-      // 1) Always mirror to localStorage (fast + offline)
       saveStore(next);
-
-      // 2) Best-effort sync to VK Storage (cross-device)
-      //    Store a single key per year: doy:YYYY
       vkYearWriterRef.current.setYear(next.days);
 
       return next;
     });
   }
 
-  function moodClass(mood?: Mood) {
-    if (!mood) return '';
-    return `mood-${mood}`;
-  }
-
   async function exportPng() {
-    // Render a dedicated export card (more beautiful than raw grid)
     const host = document.createElement('div');
     host.style.position = 'fixed';
     host.style.left = '-99999px';
     host.style.top = '0';
     document.body.appendChild(host);
 
-    // Render via React by cloning DOM: simplest is to mount a temporary subtree
-    // We avoid React portals; just create a real node and let html2canvas capture.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const ReactDOM = await import('react-dom/client');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const root = (ReactDOM as any).createRoot(host);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const root = createRoot(host);
     root.render(
       <ExportCard
         year={year}
@@ -200,7 +200,6 @@ export default function App() {
 
     const target = host.firstElementChild as HTMLElement | null;
     if (!target) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       root.unmount();
       host.remove();
       return;
@@ -212,16 +211,14 @@ export default function App() {
     });
     const dataUrl = canvas.toDataURL('image/png');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     root.unmount();
     host.remove();
 
-    // Try VK share dialog (optional)
     try {
       await bridge.send('VKWebAppShowWallPostBox', {
         message: 'Этот день — один из твоих 365.',
         attachments: dataUrl,
-      } as any);
+      });
       return;
     } catch {
       // fallback to local download
@@ -243,7 +240,7 @@ export default function App() {
   const left = Math.max(0, totalDays - todayIndex);
 
   return (
-    <ConfigProvider colorScheme={scheme as any}>
+    <ConfigProvider colorScheme={colorScheme}>
       <AdaptivityProvider>
         <AppRoot>
           <SplitLayout>
@@ -263,13 +260,7 @@ export default function App() {
                       className="grid"
                       ref={gridRef}
                       aria-label="days-grid"
-                      style={
-                        {
-                          ['--cols' as any]: gridLayout.cols,
-                          ['--cell' as any]: `${gridLayout.cell}px`,
-                          ['--gap' as any]: `${gridLayout.gap}px`,
-                        } as React.CSSProperties
-                      }
+                      style={gridCSSVars(gridLayout)}
                     >
                       {dateKeys.map((key, i) => {
                         const dayIndex = i + 1;

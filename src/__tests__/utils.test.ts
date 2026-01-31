@@ -38,7 +38,7 @@ describe('utils', () => {
 
     // Spy on createElement so we can intercept the anchor
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tagName: any) => {
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
       const el = origCreate(tagName);
       if (tagName === 'a') {
         // @ts-expect-error add mock

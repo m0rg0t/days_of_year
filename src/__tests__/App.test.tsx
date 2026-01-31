@@ -1,12 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('@vkontakte/vk-bridge', () => ({
-  default: {
-    send: vi.fn().mockResolvedValue({ result: true }),
-    subscribe: vi.fn(() => () => {}),
-  },
-}));
+vi.mock('@vkontakte/vk-bridge', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vkontakte/vk-bridge')>();
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      send: vi.fn().mockResolvedValue({ result: true }),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+    },
+  };
+});
 
 import bridge from '@vkontakte/vk-bridge';
 
@@ -27,7 +33,7 @@ const { loadYearBlobFromVkMock, setYearMock } = vi.hoisted(() => {
 });
 
 vi.mock('../vkYearStorage', async () => {
-  const actual = await vi.importActual<any>('../vkYearStorage');
+  const actual = await vi.importActual<typeof import('../vkYearStorage')>('../vkYearStorage');
   return {
     ...actual,
     loadYearBlobFromVk: loadYearBlobFromVkMock,
@@ -119,14 +125,15 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     // make wall post fail so exportPng falls back to local download
-    (bridge.send as any).mockImplementation(async (method: string) => {
+    vi.mocked(bridge.send).mockImplementation(async (method: string) => {
       if (method === 'VKWebAppShowWallPostBox') throw new Error('no');
-      return { result: true };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return { result: true } as any;
     });
 
     const click = vi.fn();
     const origCreate = Document.prototype.createElement;
-    vi.spyOn(document, 'createElement').mockImplementation(function (tagName: any) {
+    vi.spyOn(document, 'createElement').mockImplementation(function (tagName: string) {
       const el = origCreate.call(this, tagName);
       if (tagName === 'a') {
         // @ts-expect-error mock
@@ -163,13 +170,87 @@ describe('App', () => {
 
   it('export PNG calls html2canvas', async () => {
     // Use real timers here
-    (bridge.send as any).mockResolvedValue({ result: true });
+    vi.mocked(bridge.send).mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
 
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Экспорт PNG' }));
 
     await new Promise((r) => setTimeout(r, 80));
 
-    expect((html2canvas as any).mock.calls.length).toBeGreaterThan(0);
+    expect(vi.mocked(html2canvas).mock.calls.length).toBeGreaterThan(0);
   }, 10000);
+
+  it('applies VK dark scheme from VKWebAppGetConfig', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    vi.mocked(bridge.send).mockImplementation(async (method: string) => {
+      if (method === 'VKWebAppGetConfig') {
+        return { scheme: 'space_gray' } as Awaited<ReturnType<typeof bridge.send>>;
+      }
+      return { result: true } as Awaited<ReturnType<typeof bridge.send>>;
+    });
+
+    render(<App />);
+    await Promise.resolve();
+    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+  });
+
+  it('applies VK light scheme from VKWebAppGetConfig', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    vi.mocked(bridge.send).mockImplementation(async (method: string) => {
+      if (method === 'VKWebAppGetConfig') {
+        return { scheme: 'bright_light' } as Awaited<ReturnType<typeof bridge.send>>;
+      }
+      return { result: true } as Awaited<ReturnType<typeof bridge.send>>;
+    });
+
+    render(<App />);
+    await Promise.resolve();
+    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+  });
+
+  it('handles VKWebAppUpdateConfig event with scheme', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    // Capture the subscribe listener
+    let listener: ((event: { detail: { type: string; data: Record<string, unknown> } }) => void) | null = null;
+    vi.mocked(bridge.subscribe).mockImplementation((fn) => {
+      listener = fn as typeof listener;
+    });
+
+    render(<App />);
+    expect(listener).not.toBeNull();
+
+    // Simulate VKWebAppUpdateConfig event with scheme
+    listener!({ detail: { type: 'VKWebAppUpdateConfig', data: { scheme: 'vkcom_light' } } });
+
+    await Promise.resolve();
+    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+
+    // Also test with a non-config event (should be ignored)
+    listener!({ detail: { type: 'VKWebAppGetAuthToken', data: {} } });
+    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+  });
+
+  it('displays mood class on filled days', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    // Pre-populate localStorage with mood data for a past day
+    localStorage.setItem('days_of_year:v1', JSON.stringify({
+      version: 1,
+      year: 2026,
+      days: { '2026-01-01': { mood: 'blue', word: 'test' } },
+    }));
+
+    render(<App />);
+    const grid = screen.getByLabelText('days-grid');
+    const dayWithMood = grid.querySelector('button[aria-label="2026-01-01"]');
+    expect(dayWithMood).toBeTruthy();
+    expect(dayWithMood!.className).toContain('mood-blue');
+  });
 });

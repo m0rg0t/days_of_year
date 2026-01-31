@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@vkontakte/vk-bridge', () => {
+vi.mock('@vkontakte/vk-bridge', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vkontakte/vk-bridge')>();
   return {
+    ...actual,
     default: {
+      ...actual.default,
       send: vi.fn(),
     },
   };
@@ -11,39 +14,41 @@ vi.mock('@vkontakte/vk-bridge', () => {
 import bridge from '@vkontakte/vk-bridge';
 import { hideBannerAd, showBannerAd } from '../vkAds';
 
+const mockSend = vi.mocked(bridge.send);
+
 describe('vkAds', () => {
   beforeEach(() => {
-    (bridge.send as any).mockReset();
+    mockSend.mockReset();
   });
 
   it('showBannerAd calls VKWebAppShowBannerAd', async () => {
-    (bridge.send as any).mockResolvedValue({ result: true, banner_height: 50 });
+    mockSend.mockResolvedValue({ result: true, banner_height: 50 } as Awaited<ReturnType<typeof bridge.send>>);
     const res = await showBannerAd({ layoutType: 'resize' });
     expect(res.result).toBe(true);
-    expect((bridge.send as any).mock.calls[0][0]).toBe('VKWebAppShowBannerAd');
+    expect(mockSend.mock.calls[0][0]).toBe('VKWebAppShowBannerAd');
   });
 
   it('showBannerAd defaults to resize when no opts', async () => {
-    (bridge.send as any).mockResolvedValue({ result: true });
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
     await showBannerAd();
-    expect((bridge.send as any).mock.calls[0][1].layout_type).toBe('resize');
+    expect((mockSend.mock.calls[0][1] as { layout_type: string }).layout_type).toBe('resize');
   });
 
   it('showBannerAd returns result:false on failure', async () => {
-    (bridge.send as any).mockRejectedValue(new Error('no'));
+    mockSend.mockRejectedValue(new Error('no'));
     const res = await showBannerAd({ layoutType: 'resize' });
     expect(res.result).toBe(false);
   });
 
   it('hideBannerAd calls VKWebAppHideBannerAd', async () => {
-    (bridge.send as any).mockResolvedValue({ result: true });
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
     const ok = await hideBannerAd();
     expect(ok).toBe(true);
-    expect((bridge.send as any).mock.calls[0][0]).toBe('VKWebAppHideBannerAd');
+    expect(mockSend.mock.calls[0][0]).toBe('VKWebAppHideBannerAd');
   });
 
   it('hideBannerAd returns false on failure', async () => {
-    (bridge.send as any).mockRejectedValue(new Error('no'));
+    mockSend.mockRejectedValue(new Error('no'));
     const ok = await hideBannerAd();
     expect(ok).toBe(false);
   });

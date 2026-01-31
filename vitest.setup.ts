@@ -8,20 +8,21 @@ class ResizeObserverMock {
   }
   observe(target: Element) {
     // trigger once with a reasonable size so layout code executes
-    const rect = (target as any).getBoundingClientRect?.() || { width: 360, height: 640 };
-    this.cb([{ contentRect: rect } as any], this as any);
+    const rect = target.getBoundingClientRect?.() ?? { width: 360, height: 640 };
+    this.cb(
+      [{ contentRect: rect } as ResizeObserverEntry],
+      this as unknown as ResizeObserver,
+    );
   }
   unobserve() {}
   disconnect() {}
 }
 
-// @ts-expect-error - test global
-globalThis.ResizeObserver = ResizeObserverMock;
+globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 // VKUI relies on matchMedia
 if (!window.matchMedia) {
-  // @ts-expect-error - polyfill
-  window.matchMedia = (query: string) => {
+  window.matchMedia = ((query: string) => {
     return {
       matches: false,
       media: query,
@@ -32,5 +33,5 @@ if (!window.matchMedia) {
       removeListener: () => {},
       dispatchEvent: () => false,
     };
-  };
+  }) as typeof window.matchMedia;
 }

@@ -26,13 +26,11 @@ export function ExportCard(props: {
 
       <div
         className="exportGrid"
-        style={
-          {
-            ['--cols' as any]: gridLayout.cols,
-            ['--cell' as any]: `${gridLayout.cell}px`,
-            ['--gap' as any]: `${gridLayout.gap}px`,
-          } as React.CSSProperties
-        }
+        style={{
+          '--cols': gridLayout.cols,
+          '--cell': `${gridLayout.cell}px`,
+          '--gap': `${gridLayout.gap}px`,
+        } as React.CSSProperties}
       >
         {dateKeys.map((key, i) => {
           const dayIndex = i + 1;
