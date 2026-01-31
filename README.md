@@ -1,5 +1,8 @@
 # Дни года (VK Mini Apps)
 
+[![CI](https://github.com/m0rg0t/days_of_year/workflows/CI/badge.svg)](https://github.com/m0rg0t/days_of_year/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/m0rg0t/days_of_year/workflows/Deploy%20to%20GitHub%20Pages/badge.svg)](https://github.com/m0rg0t/days_of_year/actions/workflows/pages.yml)
+
 > «Этот день — один из твоих 365.»
 
 Мини‑приложение VK, которое визуализирует год как сетку дней.
