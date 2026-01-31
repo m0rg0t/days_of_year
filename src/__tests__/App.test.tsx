@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent, act } from '@testing-library/react';
 
 vi.mock('@vkontakte/vk-bridge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vkontakte/vk-bridge')>();
@@ -54,6 +54,8 @@ afterEach(() => {
   loadYearBlobFromVkMock.mockReset();
   setYearMock.mockReset();
   localStorage.clear();
+  document.body.style.background = '';
+  document.body.style.color = '';
   vi.clearAllMocks();
 });
 
@@ -113,11 +115,13 @@ describe('App', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    // selecting that day should show stored trace
+    // selecting that past day should show mood editor with stored data
     const grid = screen.getAllByLabelText('days-grid')[0];
     const first = grid.querySelector('button[aria-label="2026-01-01"]');
     fireEvent.click(first!);
-    expect(screen.getByText(/слово: ok/)).toBeInTheDocument();
+    // Past days now show the editable form, word should be in the input
+    const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
+    expect(input.value).toBe('ok');
   });
 
   it('can set today mood and word and export (fallback download)', async () => {
@@ -145,11 +149,11 @@ describe('App', () => {
     render(<App />);
 
     // mood buttons should be visible for today
-    fireEvent.click(screen.getByText('🔵'));
-    fireEvent.click(screen.getByText('🟢'));
-    fireEvent.click(screen.getByText('🔴'));
-    fireEvent.click(screen.getByText('🟡'));
-    fireEvent.click(screen.getByText('сброс'));
+    fireEvent.click(screen.getByLabelText('mood-blue'));
+    fireEvent.click(screen.getByLabelText('mood-green'));
+    fireEvent.click(screen.getByLabelText('mood-red'));
+    fireEvent.click(screen.getByLabelText('mood-yellow'));
+    fireEvent.click(screen.getByLabelText('mood-reset'));
 
     expect(setYearMock).toHaveBeenCalled();
 
@@ -192,8 +196,10 @@ describe('App', () => {
     });
 
     render(<App />);
-    await Promise.resolve();
+    await act(async () => { await Promise.resolve(); });
     expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    // jsdom normalises hex → rgb
+    expect(document.body.style.background).toBe('rgb(10, 10, 10)');
   });
 
   it('applies VK light scheme from VKWebAppGetConfig', async () => {
@@ -208,8 +214,10 @@ describe('App', () => {
     });
 
     render(<App />);
-    await Promise.resolve();
+    await act(async () => { await Promise.resolve(); });
     expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(document.body.style.background).toBe('rgb(235, 237, 240)');
+    expect(document.body.style.color).toBe('rgb(26, 26, 30)');
   });
 
   it('handles VKWebAppUpdateConfig event with scheme', async () => {
@@ -225,15 +233,145 @@ describe('App', () => {
     render(<App />);
     expect(listener).not.toBeNull();
 
-    // Simulate VKWebAppUpdateConfig event with scheme
-    listener!({ detail: { type: 'VKWebAppUpdateConfig', data: { scheme: 'vkcom_light' } } });
+    // Default is dark
+    expect(document.body.style.background).toBe('rgb(10, 10, 10)');
 
-    await Promise.resolve();
+    // Simulate VKWebAppUpdateConfig event with scheme
+    act(() => {
+      listener!({ detail: { type: 'VKWebAppUpdateConfig', data: { scheme: 'vkcom_light' } } });
+    });
+
+    await act(async () => { await Promise.resolve(); });
     expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(document.body.style.background).toBe('rgb(235, 237, 240)');
 
     // Also test with a non-config event (should be ignored)
     listener!({ detail: { type: 'VKWebAppGetAuthToken', data: {} } });
     expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+  });
+
+  it('allows mood editing for past days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    const grid = screen.getByLabelText('days-grid');
+    // Click a past day (Jan 5)
+    const pastDay = grid.querySelector('button[aria-label="2026-01-05"]');
+    fireEvent.click(pastDay!);
+    // Mood selector should be visible for past days
+    expect(screen.getByLabelText('mood-blue')).toBeInTheDocument();
+    expect(screen.getByText('Что было важным?')).toBeInTheDocument();
+  });
+
+  it('shows read-only view for future days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    const grid = screen.getByLabelText('days-grid');
+    // Click a future day (Feb 15)
+    const futureDay = grid.querySelector('button[aria-label="2026-02-15"]');
+    fireEvent.click(futureDay!);
+    // Should show read-only trace, not mood selector
+    expect(screen.queryByLabelText('mood-blue')).toBeNull();
+    expect(screen.getByText(/настроение: —/)).toBeInTheDocument();
+  });
+
+  it('shows "Что сегодня было важным?" for today', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    // Today is selected by default
+    expect(screen.getByText('Что сегодня было важным?')).toBeInTheDocument();
+  });
+
+  it('year navigation: clicking ← goes to previous year', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    expect(screen.getByText('2026')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('prev-year'));
+    });
+
+    expect(screen.getByText('2025')).toBeInTheDocument();
+    // Grid should re-render with 2025 days
+    const grid = screen.getByLabelText('days-grid');
+    expect(grid.querySelector('button[aria-label="2025-01-01"]')).toBeTruthy();
+  });
+
+  it('year navigation: → is disabled for current year', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    const nextBtn = screen.getByLabelText('next-year');
+    expect(nextBtn).toBeDisabled();
+  });
+
+  it('year navigation: progress bar hidden for non-current year', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    expect(document.querySelector('.progressBar')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('prev-year'));
+    });
+
+    expect(document.querySelector('.progressBar')).toBeNull();
+  });
+
+  it('shows quote block for selected day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    const quoteBlock = screen.getByTestId('quote-block');
+    expect(quoteBlock).toBeInTheDocument();
+    expect(quoteBlock.textContent!.length).toBeGreaterThan(0);
+  });
+
+  it('stats toggle shows and hides stats panel', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    // Stats panel hidden initially
+    expect(screen.queryByTestId('stats-panel')).toBeNull();
+
+    // Click toggle to show
+    fireEvent.click(screen.getByLabelText('toggle-stats'));
+    expect(screen.getByTestId('stats-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('badges-row')).toBeInTheDocument();
+
+    // Click toggle to hide
+    fireEvent.click(screen.getByLabelText('toggle-stats'));
+    expect(screen.queryByTestId('stats-panel')).toBeNull();
+  });
+
+  it('stats panel shows correct data with filled days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    localStorage.setItem('days_of_year:v1', JSON.stringify({
+      version: 1,
+      year: 2026,
+      days: {
+        '2026-01-01': { mood: 'blue', word: 'test' },
+        '2026-01-02': { mood: 'green' },
+        '2026-01-03': { mood: 'blue' },
+      },
+    }));
+
+    render(<App />);
+    fireEvent.click(screen.getByLabelText('toggle-stats'));
+    expect(screen.getByText(/3 \/ 30/)).toBeInTheDocument();
   });
 
   it('displays mood class on filled days', async () => {

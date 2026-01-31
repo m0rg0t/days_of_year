@@ -25,6 +25,25 @@ export function dateKeyForDayIndex(year: number, dayIndex1Based: number): string
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+const MONTH_SHORT_NAMES = [
+  'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
+  'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек',
+];
+
+/**
+ * Returns a map from 1-based day index to month short label
+ * for the first day of each month in the given year.
+ */
+export function monthStartIndices(year: number): Map<number, string> {
+  const result = new Map<number, string>();
+  for (let m = 0; m < 12; m++) {
+    const firstOfMonth = new Date(year, m, 1);
+    const index = dayOfYear(firstOfMonth);
+    result.set(index, MONTH_SHORT_NAMES[m]);
+  }
+  return result;
+}
+
 export function downloadText(filename: string, text: string) {
   const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);

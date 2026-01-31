@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { dateKeyForDayIndex, dayOfYear, daysInYear, isLeapYear, downloadText } from '../utils';
+import { dateKeyForDayIndex, dayOfYear, daysInYear, isLeapYear, downloadText, monthStartIndices } from '../utils';
 
 describe('utils', () => {
   it('isLeapYear', () => {
@@ -55,5 +55,21 @@ describe('utils', () => {
     expect(revokeObjectURL).toHaveBeenCalledTimes(1);
 
     vi.restoreAllMocks();
+  });
+
+  it('monthStartIndices returns 12 entries', () => {
+    const map = monthStartIndices(2026);
+    expect(map.size).toBe(12);
+    // Jan always starts at day 1
+    expect(map.get(1)).toBe('Янв');
+    // Feb starts at day 32 for non-leap year
+    expect(map.get(32)).toBe('Фев');
+  });
+
+  it('monthStartIndices handles leap year', () => {
+    const map = monthStartIndices(2024);
+    expect(map.size).toBe(12);
+    // Mar starts at day 61 in leap year (31+29+1)
+    expect(map.get(61)).toBe('Мар');
   });
 });
