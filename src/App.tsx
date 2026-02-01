@@ -115,7 +115,9 @@ export default function App() {
     })();
   }, [viewYear]);
 
-  // ResizeObserver for grid layout
+  // ResizeObserver for grid layout — only reacts to width changes to
+  // prevent feedback loops where height changes trigger relayout.
+  const prevWidthRef = useRef(0);
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
@@ -124,11 +126,14 @@ export default function App() {
     const ro = new ResizeObserver((entries) => {
       const cr = entries[0]?.contentRect;
       if (!cr) return;
-      setGridLayout(computeBestLayout({ totalDays, width: cr.width, height: cr.height }));
+      const w = Math.round(cr.width);
+      if (w === prevWidthRef.current) return;
+      prevWidthRef.current = w;
+      setGridLayout(computeBestLayout({ width: w }));
     });
     ro.observe(parent);
     return () => ro.disconnect();
-  }, [totalDays]);
+  }, []);
 
   const selectedKey = dateKeyForDayIndex(viewYear, selectedDayIndex);
   const selectedData = store.days[selectedKey] || {};
