@@ -44,6 +44,12 @@ export function monthStartIndices(year: number): Map<number, string> {
   return result;
 }
 
+/** Returns a BEM modifier class for a mood, e.g. `mood-blue`. */
+export function moodClass(mood?: Mood): string {
+  if (!mood) return '';
+  return `mood-${mood}`;
+}
+
 export function downloadText(filename: string, text: string) {
   const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);

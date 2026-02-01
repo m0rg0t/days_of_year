@@ -318,13 +318,13 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     render(<App />);
-    expect(document.querySelector('.progressBar')).toBeTruthy();
+    expect(document.querySelector('.year-nav__progress')).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(screen.getByLabelText('prev-year'));
     });
 
-    expect(document.querySelector('.progressBar')).toBeNull();
+    expect(document.querySelector('.year-nav__progress')).toBeNull();
   });
 
   it('shows quote block for selected day', () => {

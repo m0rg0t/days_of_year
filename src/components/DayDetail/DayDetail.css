@@ -1,0 +1,64 @@
+.day-detail__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent-border, rgba(99,102,241,0.15));
+  background: var(--vkui--color_background_secondary_alpha);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 2px var(--vkui--color_overlay_primary);
+}
+
+.day-detail__quote {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--vkui--color_background_secondary_alpha);
+  border: 1px solid rgba(99,102,241,0.1);
+  backdrop-filter: blur(8px);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--vkui--color_text_secondary);
+  line-height: 1.5;
+}
+
+.day-detail__mood-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.day-detail__mood-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.day-detail__mood-btn:hover {
+  transform: scale(1.15);
+}
+
+.day-detail__mood-btn--active {
+  border-color: var(--vkui--color_stroke_accent);
+  box-shadow: 0 0 0 2px var(--vkui--color_background_secondary_alpha);
+}
+
+.day-detail__mood-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+}
+
+.day-detail__mood-dot--blue   { background: var(--mood-blue-bright, rgba(59, 130, 246, 0.85)); box-shadow: 0 0 6px var(--mood-blue-glow, rgba(59,130,246,0.4)); }
+.day-detail__mood-dot--green  { background: var(--mood-green-bright, rgba(34, 197, 94, 0.85)); box-shadow: 0 0 6px var(--mood-green-glow, rgba(34,197,94,0.4)); }
+.day-detail__mood-dot--red    { background: var(--mood-red-bright, rgba(239, 68, 68, 0.85)); box-shadow: 0 0 6px var(--mood-red-glow, rgba(239,68,68,0.4)); }
+.day-detail__mood-dot--yellow { background: var(--mood-yellow-bright, rgba(234, 179, 8, 0.85)); box-shadow: 0 0 6px var(--mood-yellow-glow, rgba(234,179,8,0.4)); }
