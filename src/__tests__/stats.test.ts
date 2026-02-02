@@ -86,4 +86,9 @@ describe('computeYearStats', () => {
     expect(stats.filledDays).toBe(2);
     expect(stats.totalPastDays).toBe(365);
   });
+
+  it('uses leap year length for past years', () => {
+    const stats = computeYearStats({}, 2024, 0);
+    expect(stats.totalPastDays).toBe(366);
+  });
 });

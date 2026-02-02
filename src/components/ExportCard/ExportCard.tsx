@@ -1,12 +1,13 @@
 import './ExportCard.css';
 import type { DayData } from '../../vkYearStorage';
 import { moodClass } from '../../utils';
+import type { GridLayout } from '../../gridLayout';
 
 export function ExportCard(props: {
   year: number;
   totalDays: number;
   todayIndex: number;
-  gridLayout: { cols: number; cell: number; gap: number };
+  gridLayout: GridLayout;
   days: Record<string, DayData>;
   dateKeys: string[];
 }) {

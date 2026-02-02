@@ -1,4 +1,5 @@
 import { moodClass } from '../../utils';
+import type { GridLayout } from '../../gridLayout';
 import type { DayData } from '../../vkYearStorage';
 import './DayGrid.css';
 
@@ -8,12 +9,12 @@ interface DayGridProps {
   todayIndex: number;
   selectedDayIndex: number;
   monthStarts: Map<number, string>;
-  gridLayout: { cols: number; cell: number; gap: number };
+  gridLayout: GridLayout;
   gridRef: React.RefObject<HTMLDivElement | null>;
   onSelectDay: (dayIndex: number) => void;
 }
 
-function gridCSSVars(layout: { cols: number; cell: number; gap: number }): React.CSSProperties {
+function gridCSSVars(layout: GridLayout): React.CSSProperties {
   return {
     '--cols': layout.cols,
     '--cell': `${layout.cell}px`,

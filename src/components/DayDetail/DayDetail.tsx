@@ -1,6 +1,6 @@
 import { Div, Group, Header, Input } from '@vkontakte/vkui';
 import { getQuoteForDate } from '../../quotes';
-import type { Mood } from '../../utils';
+import { MOODS } from '../../utils';
 import type { DayData } from '../../vkYearStorage';
 import './DayDetail.css';
 
@@ -27,7 +27,7 @@ export function DayDetail({
     <>
       <Div>
         <div className="day-detail__pill">
-          <strong style={{ minWidth: 96 }}>День:</strong>
+          <strong className="day-detail__pill-label">День:</strong>
           <span>{selectedKey}</span>
           <span className="small">({selectedDayIndex}/{totalDays})</span>
         </div>
@@ -40,7 +40,7 @@ export function DayDetail({
         <>
           <Group header={<Header>Настроение</Header>}>
             <Div className="day-detail__mood-row">
-              {(['blue', 'green', 'red', 'yellow'] as const).map((mood: Mood) => (
+              {MOODS.map((mood) => (
                 <button
                   key={mood}
                   className={`day-detail__mood-btn ${dayData.mood === mood ? 'day-detail__mood-btn--active' : ''}`}
@@ -55,14 +55,14 @@ export function DayDetail({
                 onClick={() => onUpdateDay(selectedKey, { mood: undefined })}
                 aria-label="mood-reset"
               >
-                <span style={{ fontSize: 12, color: 'var(--vkui--color_text_secondary)' }}>✕</span>
+                <span className="day-detail__mood-reset">✕</span>
               </button>
             </Div>
           </Group>
 
           <Group header={<Header>Вопрос дня</Header>}>
             <Div>
-              <div className="small" style={{ marginBottom: 8 }}>
+              <div className="day-detail__question small">
                 {isToday ? 'Что сегодня было важным?' : 'Что было важным?'}
               </div>
               <Input

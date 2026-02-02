@@ -5,6 +5,12 @@
   justify-content: center;
 }
 
+@media (min-width: 960px) {
+  .day-grid {
+    justify-content: flex-start;
+  }
+}
+
 .day-grid__grid {
   --cols: 20;
   --cell: 14px;

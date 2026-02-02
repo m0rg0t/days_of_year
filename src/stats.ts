@@ -1,6 +1,6 @@
-import type { Mood } from './utils';
 import type { DayData } from './vkYearStorage';
-import { dateKeyForDayIndex } from './utils';
+import { dateKeyForDayIndex, daysInYear, MOODS } from './utils';
+import type { Mood } from './utils';
 
 export interface YearStats {
   filledDays: number;
@@ -12,8 +12,6 @@ export interface YearStats {
   currentStreak: number;
   daysWithWord: number;
 }
-
-const ALL_MOODS: Mood[] = ['blue', 'green', 'red', 'yellow'];
 
 /**
  * Compute year statistics from a days record.
@@ -32,11 +30,12 @@ export function computeYearStats(
   let longestStreak = 0;
   let currentRun = 0;
 
+  const totalDays = daysInYear(year);
   // totalPastDays: for current year it's todayIndex, for past years it's all days
-  const totalPastDays = todayIndex > 0 ? todayIndex : 365; // approximate for past years
+  const totalPastDays = todayIndex > 0 ? Math.min(todayIndex, totalDays) : totalDays;
 
   // Scan all past days in order
-  const scanLimit = todayIndex > 0 ? todayIndex : 366;
+  const scanLimit = totalPastDays;
   for (let d = 1; d <= scanLimit; d++) {
     const key = dateKeyForDayIndex(year, d);
     const data = days[key];
@@ -71,7 +70,7 @@ export function computeYearStats(
   // Most common mood
   let mostCommonMood: Mood | null = null;
   let maxCount = 0;
-  for (const mood of ALL_MOODS) {
+  for (const mood of MOODS) {
     if (moodCounts[mood] > maxCount) {
       maxCount = moodCounts[mood];
       mostCommonMood = mood;

@@ -1,4 +1,5 @@
 export type GridLayout = { cols: number; cell: number; gap: number };
+export type GridDensity = 'comfortable' | 'compact';
 
 /**
  * Compute a grid layout that fits totalDays into the available width.
@@ -8,16 +9,22 @@ export type GridLayout = { cols: number; cell: number; gap: number };
  */
 export function computeBestLayout(params: {
   width: number;
+  density?: GridDensity;
 }): GridLayout {
-  const { width } = params;
+  const { width, density = 'comfortable' } = params;
 
   const pad = 4;
   const W = Math.max(0, width - pad * 2);
 
   const candidates: GridLayout[] = [];
 
-  for (let cols = 14; cols <= 26; cols++) {
-    const gap = W < 420 ? 4 : 6;
+  const colRange = density === 'compact'
+    ? { min: 18, max: 30 }
+    : { min: 14, max: 26 };
+
+  for (let cols = colRange.min; cols <= colRange.max; cols++) {
+    const baseGap = W < 420 ? 4 : 6;
+    const gap = density === 'compact' ? Math.max(2, baseGap - 2) : baseGap;
     const cell = Math.floor((W - gap * (cols - 1)) / cols);
 
     if (cell >= 8) {

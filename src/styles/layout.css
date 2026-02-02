@@ -1,0 +1,41 @@
+.app-layout {
+  display: grid;
+  gap: 12px;
+  padding: 0 12px 16px;
+}
+
+.app-layout__side {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.calendar-controls__density {
+  display: flex;
+  gap: 6px;
+}
+
+@media (min-width: 600px) {
+  .calendar-controls__density {
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 960px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.95fr);
+    align-items: start;
+  }
+
+  .app-layout__side {
+    position: sticky;
+    top: 72px;
+  }
+}

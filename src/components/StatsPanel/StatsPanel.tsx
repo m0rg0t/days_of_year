@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Div } from '@vkontakte/vkui';
 import type { YearStats } from '../../stats';
 import type { Badge } from '../../badges';
+import { MOODS } from '../../utils';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
@@ -50,7 +51,7 @@ export function StatsPanel({ yearStats, badges }: StatsPanelProps) {
             )}
             {yearStats.filledDays > 0 && (
               <div className="stats-panel__mood-distribution">
-                {(['blue', 'green', 'red', 'yellow'] as const).map((mood) => {
+                {MOODS.map((mood) => {
                   const pct = yearStats.filledDays > 0
                     ? Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100)
                     : 0;

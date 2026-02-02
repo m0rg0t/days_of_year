@@ -23,4 +23,10 @@ describe('gridLayout', () => {
     const layout = computeBestLayout({ width: 600 });
     expect(layout.gap).toBe(6);
   });
+
+  it('compact density produces smaller or equal cells', () => {
+    const comfortable = computeBestLayout({ width: 480, density: 'comfortable' });
+    const compact = computeBestLayout({ width: 480, density: 'compact' });
+    expect(compact.cell).toBeLessThanOrEqual(comfortable.cell);
+  });
 });

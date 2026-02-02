@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import { Button, Div, Group, Header } from '@vkontakte/vkui';
 import { downloadText } from '../../utils';
+import type { GridLayout } from '../../gridLayout';
 import type { Store } from '../../localStore';
 import { ExportCard } from '../ExportCard/ExportCard';
 import './ExportPanel.css';
@@ -11,7 +12,7 @@ interface ExportPanelProps {
   viewYear: number;
   totalDays: number;
   todayIndex: number;
-  gridLayout: { cols: number; cell: number; gap: number };
+  gridLayout: GridLayout;
   store: Store;
   dateKeys: string[];
 }

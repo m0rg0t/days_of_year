@@ -10,6 +10,10 @@
   box-shadow: 0 1px 2px var(--vkui--color_overlay_primary);
 }
 
+.day-detail__pill-label {
+  min-width: 96px;
+}
+
 .day-detail__quote {
   margin-top: 10px;
   padding: 10px 14px;
@@ -47,6 +51,11 @@
   transform: scale(1.15);
 }
 
+.day-detail__mood-reset {
+  font-size: 12px;
+  color: var(--vkui--color_text_secondary);
+}
+
 .day-detail__mood-btn--active {
   border-color: var(--vkui--color_stroke_accent);
   box-shadow: 0 0 0 2px var(--vkui--color_background_secondary_alpha);
@@ -62,3 +71,7 @@
 .day-detail__mood-dot--green  { background: var(--mood-green-bright, rgba(34, 197, 94, 0.85)); box-shadow: 0 0 6px var(--mood-green-glow, rgba(34,197,94,0.4)); }
 .day-detail__mood-dot--red    { background: var(--mood-red-bright, rgba(239, 68, 68, 0.85)); box-shadow: 0 0 6px var(--mood-red-glow, rgba(239,68,68,0.4)); }
 .day-detail__mood-dot--yellow { background: var(--mood-yellow-bright, rgba(234, 179, 8, 0.85)); box-shadow: 0 0 6px var(--mood-yellow-glow, rgba(234,179,8,0.4)); }
+
+.day-detail__question {
+  margin-bottom: 8px;
+}
