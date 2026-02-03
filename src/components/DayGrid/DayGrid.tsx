@@ -8,7 +8,6 @@ interface DayGridProps {
   days: Record<string, DayData>;
   todayIndex: number;
   selectedDayIndex: number;
-  monthStarts: Map<number, string>;
   gridLayout: GridLayout;
   gridRef: React.RefObject<HTMLDivElement | null>;
   onSelectDay: (dayIndex: number) => void;
@@ -27,7 +26,6 @@ export function DayGrid({
   days,
   todayIndex,
   selectedDayIndex,
-  monthStarts,
   gridLayout,
   gridRef,
   onSelectDay,
@@ -45,7 +43,6 @@ export function DayGrid({
           const data = days[key];
           const filled = dayIndex < todayIndex;
           const todayDay = dayIndex === todayIndex;
-          const monthLabel = monthStarts.get(dayIndex);
           const mood = moodClass(data?.mood);
 
           const cls = [
@@ -60,9 +57,6 @@ export function DayGrid({
 
           return (
             <div key={key} className="day-grid__cell">
-              {monthLabel && gridLayout.cell >= 12 && (
-                <span className="day-grid__month-label">{monthLabel}</span>
-              )}
               <button
                 className={cls}
                 onClick={() => onSelectDay(dayIndex)}

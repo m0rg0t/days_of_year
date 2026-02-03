@@ -22,9 +22,23 @@
   gap: 6px;
 }
 
+.story-share {
+  display: flex;
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+.story-share .vkuiButton {
+  width: 100%;
+}
+
 @media (min-width: 600px) {
   .calendar-controls__density {
     margin-left: auto;
+  }
+
+  .story-share .vkuiButton {
+    width: auto;
   }
 }
 

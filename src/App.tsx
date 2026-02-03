@@ -10,14 +10,19 @@ import {
   Div,
   Panel,
   PanelHeader,
+  PanelHeaderButton,
   SplitCol,
   SplitLayout,
   View,
+  ModalRoot,
+  ModalPage,
+  ModalPageHeader,
 } from '@vkontakte/vkui';
+import bridge from '@vkontakte/vk-bridge';
 
 import './styles/global.css';
 import './styles/layout.css';
-import { dateKeyForDayIndex, dayOfYear, daysInYear, monthStartIndices } from './utils';
+import { dateKeyForDayIndex, dayOfYear, daysInYear } from './utils';
 import { computeYearStats } from './stats';
 import { getEarnedBadges } from './badges';
 import { loadYearBlobFromVk, createVkYearBlobWriter } from './vkYearStorage';
@@ -27,12 +32,16 @@ import type { Store } from './localStore';
 import { loadGridDensity, saveGridDensity } from './uiPrefs';
 import { useGridLayout } from './hooks/useGridLayout';
 import { useVkTheme } from './hooks/useVkTheme';
+import { useIsDesktop } from './hooks/useIsDesktop';
+import { createStoryImageDataUrl } from './storyImage';
 
 import { YearNav } from './components/YearNav/YearNav';
 import { DayGrid } from './components/DayGrid/DayGrid';
 import { DayDetail } from './components/DayDetail/DayDetail';
 import { StatsPanel } from './components/StatsPanel/StatsPanel';
 import { ExportPanel } from './components/ExportPanel/ExportPanel';
+
+const DAY_DETAIL_MODAL = 'day-detail-modal';
 
 export default function App() {
   const today = useMemo(() => new Date(), []);
@@ -47,8 +56,11 @@ export default function App() {
   const [store, setStore] = useState<Store>(() => loadStore(viewYear));
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(realTodayIndex);
   const [gridDensity, setGridDensity] = useState(() => loadGridDensity());
+  const [isSharingStory, setIsSharingStory] = useState(false);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   const { gridRef, gridLayout } = useGridLayout(gridDensity);
+  const isDesktop = useIsDesktop();
   const vkYearWriterRef = useRef(createVkYearBlobWriter(viewYear));
 
   const changeYear = useCallback((year: number) => {
@@ -76,6 +88,10 @@ export default function App() {
     saveGridDensity(gridDensity);
   }, [gridDensity]);
 
+  useEffect(() => {
+    if (isDesktop && activeModal) setActiveModal(null);
+  }, [isDesktop, activeModal]);
+
   const selectedKey = dateKeyForDayIndex(viewYear, selectedDayIndex);
   const selectedData = store.days[selectedKey] || {};
   const isSelectedPastOrToday = todayIndex > 0 && selectedDayIndex <= todayIndex;
@@ -86,7 +102,6 @@ export default function App() {
     () => Array.from({ length: totalDays }).map((_, i) => dateKeyForDayIndex(viewYear, i + 1)),
     [totalDays, viewYear],
   );
-  const monthStarts = useMemo(() => monthStartIndices(viewYear), [viewYear]);
   const yearStats = useMemo(() => computeYearStats(store.days, viewYear, todayIndex), [store.days, viewYear, todayIndex]);
   const badges = useMemo(() => getEarnedBadges(yearStats), [yearStats]);
 
@@ -97,6 +112,45 @@ export default function App() {
     }
     setSelectedDayIndex(realTodayIndex);
   }, [viewYear, currentYear, changeYear, realTodayIndex]);
+
+  const closeModal = useCallback(() => setActiveModal(null), []);
+
+  const handleSelectDay = useCallback((dayIndex: number) => {
+    setSelectedDayIndex(dayIndex);
+    if (!isDesktop) {
+      setActiveModal(DAY_DETAIL_MODAL);
+    }
+  }, [isDesktop]);
+
+  const shareToStory = useCallback(async () => {
+    if (isSharingStory) return;
+    setIsSharingStory(true);
+    try {
+      const dataUrl = createStoryImageDataUrl({
+        year: viewYear,
+        totalDays,
+        todayIndex,
+        days: store.days,
+        dateKeys,
+      });
+
+      if (!dataUrl) return;
+
+      await bridge.send('VKWebAppShowStoryBox', {
+        background_type: 'image',
+        blob: dataUrl,
+        attachment: {
+          type: 'url',
+          url: window.location.href,
+          text: 'open',
+        },
+      });
+    } catch (error) {
+      console.error('Failed to share story', error);
+    } finally {
+      setIsSharingStory(false);
+    }
+  }, [isSharingStory, viewYear, totalDays, todayIndex, store.days, dateKeys]);
 
   function updateDay(key: string, patch: Partial<DayData>) {
     setStore((prev) => {
@@ -114,11 +168,54 @@ export default function App() {
         <AppRoot>
           <SplitLayout>
             <SplitCol>
-              <View activePanel="main">
+              <View
+                activePanel="main"
+                modal={(
+                  <ModalRoot activeModal={activeModal} onClose={closeModal}>
+                    <ModalPage
+                      id={DAY_DETAIL_MODAL}
+                      onClose={closeModal}
+                      dynamicContentHeight
+                      header={(
+                        <ModalPageHeader
+                          after={(
+                            <PanelHeaderButton onClick={closeModal}>
+                              Готово
+                            </PanelHeaderButton>
+                          )}
+                        >
+                          День
+                        </ModalPageHeader>
+                      )}
+                    >
+                      <DayDetail
+                        selectedKey={selectedKey}
+                        selectedDayIndex={selectedDayIndex}
+                        totalDays={totalDays}
+                        isEditable={isSelectedEditable}
+                        isToday={isToday}
+                        dayData={selectedData}
+                        onUpdateDay={updateDay}
+                      />
+                    </ModalPage>
+                  </ModalRoot>
+                )}
+              >
                 <Panel id="main">
                   <PanelHeader>Дни года</PanelHeader>
 
                   <Group header={<Header>«Этот день — один из твоих 365.»</Header>}>
+                    <Div className="story-share">
+                      <Button
+                        size="m"
+                        mode="primary"
+                        onClick={shareToStory}
+                        loading={isSharingStory}
+                        disabled={isSharingStory}
+                      >
+                        Поделиться в историю
+                      </Button>
+                    </Div>
                     <YearNav
                       viewYear={viewYear}
                       currentYear={currentYear}
@@ -161,25 +258,26 @@ export default function App() {
                         days={store.days}
                         todayIndex={todayIndex}
                         selectedDayIndex={selectedDayIndex}
-                        monthStarts={monthStarts}
                         gridLayout={gridLayout}
                         gridRef={gridRef}
-                        onSelectDay={setSelectedDayIndex}
+                        onSelectDay={handleSelectDay}
                       />
                     </Group>
 
                     <div className="app-layout__side">
-                      <Group header={<Header>День</Header>}>
-                        <DayDetail
-                          selectedKey={selectedKey}
-                          selectedDayIndex={selectedDayIndex}
-                          totalDays={totalDays}
-                          isEditable={isSelectedEditable}
-                          isToday={isToday}
-                          dayData={selectedData}
-                          onUpdateDay={updateDay}
-                        />
-                      </Group>
+                      {isDesktop && (
+                        <Group header={<Header>День</Header>}>
+                          <DayDetail
+                            selectedKey={selectedKey}
+                            selectedDayIndex={selectedDayIndex}
+                            totalDays={totalDays}
+                            isEditable={isSelectedEditable}
+                            isToday={isToday}
+                            dayData={selectedData}
+                            onUpdateDay={updateDay}
+                          />
+                        </Group>
+                      )}
 
                       <Group header={<Header>Статистика</Header>}>
                         <StatsPanel yearStats={yearStats} badges={badges} />
