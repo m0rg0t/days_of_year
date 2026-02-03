@@ -1,8 +1,6 @@
 import type { DayData } from './vkYearStorage';
 
 type StoryImageInput = {
-  year: number;
-  totalDays: number;
   todayIndex: number;
   days: Record<string, DayData>;
   dateKeys: string[];
@@ -16,8 +14,6 @@ const MOOD_COLORS: Record<string, { fill: string; stroke: string }> = {
 };
 
 export function createStoryImageDataUrl({
-  year,
-  totalDays,
   todayIndex,
   days,
   dateKeys,
@@ -62,9 +58,7 @@ export function createStoryImageDataUrl({
   const cols = 20;
   const cell = 18;
   const gap = 8;
-  const rows = Math.ceil(totalDays / cols);
   const gridWidth = cols * cell + (cols - 1) * gap;
-  const gridHeight = rows * cell + (rows - 1) * gap;
   const gridX = Math.round((width - gridWidth) / 2);
   const gridY = 260;
 

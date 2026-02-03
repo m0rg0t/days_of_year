@@ -127,8 +127,6 @@ export default function App() {
     setIsSharingStory(true);
     try {
       const dataUrl = createStoryImageDataUrl({
-        year: viewYear,
-        totalDays,
         todayIndex,
         days: store.days,
         dateKeys,
@@ -166,41 +164,40 @@ export default function App() {
     <ConfigProvider colorScheme={colorScheme}>
       <AdaptivityProvider>
         <AppRoot>
-          <SplitLayout>
-            <SplitCol>
-              <View
-                activePanel="main"
-                modal={(
-                  <ModalRoot activeModal={activeModal} onClose={closeModal}>
-                    <ModalPage
-                      id={DAY_DETAIL_MODAL}
-                      onClose={closeModal}
-                      dynamicContentHeight
-                      header={(
-                        <ModalPageHeader
-                          after={(
-                            <PanelHeaderButton onClick={closeModal}>
-                              Готово
-                            </PanelHeaderButton>
-                          )}
-                        >
-                          День
-                        </ModalPageHeader>
+          <SplitLayout
+            modal={(
+              <ModalRoot activeModal={activeModal} onClose={closeModal}>
+                <ModalPage
+                  id={DAY_DETAIL_MODAL}
+                  onClose={closeModal}
+                  dynamicContentHeight
+                  header={(
+                    <ModalPageHeader
+                      after={(
+                        <PanelHeaderButton onClick={closeModal}>
+                          Готово
+                        </PanelHeaderButton>
                       )}
                     >
-                      <DayDetail
-                        selectedKey={selectedKey}
-                        selectedDayIndex={selectedDayIndex}
-                        totalDays={totalDays}
-                        isEditable={isSelectedEditable}
-                        isToday={isToday}
-                        dayData={selectedData}
-                        onUpdateDay={updateDay}
-                      />
-                    </ModalPage>
-                  </ModalRoot>
-                )}
-              >
+                      День
+                    </ModalPageHeader>
+                  )}
+                >
+                  <DayDetail
+                    selectedKey={selectedKey}
+                    selectedDayIndex={selectedDayIndex}
+                    totalDays={totalDays}
+                    isEditable={isSelectedEditable}
+                    isToday={isToday}
+                    dayData={selectedData}
+                    onUpdateDay={updateDay}
+                  />
+                </ModalPage>
+              </ModalRoot>
+            )}
+          >
+            <SplitCol>
+              <View activePanel="main">
                 <Panel id="main">
                   <PanelHeader>Дни года</PanelHeader>
 
