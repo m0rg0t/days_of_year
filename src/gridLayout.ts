@@ -13,17 +13,19 @@ export function computeBestLayout(params: {
 }): GridLayout {
   const { width, density = 'comfortable' } = params;
 
+  // Cap calculation width to keep grid rows from becoming too tall on wide screens.
+  const effectiveWidth = Math.min(width, 420);
   const pad = 4;
-  const W = Math.max(0, width - pad * 2);
+  const W = Math.max(0, effectiveWidth - pad * 2);
 
   const candidates: GridLayout[] = [];
 
   const colRange = density === 'compact'
-    ? { min: 18, max: 30 }
-    : { min: 14, max: 26 };
+    ? { min: 20, max: 34 }
+    : { min: 16, max: 30 };
 
   for (let cols = colRange.min; cols <= colRange.max; cols++) {
-    const baseGap = W < 420 ? 4 : 6;
+    const baseGap = width < 420 ? 4 : 6;
     const gap = density === 'compact' ? Math.max(2, baseGap - 2) : baseGap;
     const cell = Math.floor((W - gap * (cols - 1)) / cols);
 

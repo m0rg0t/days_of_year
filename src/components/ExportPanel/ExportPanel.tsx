@@ -1,7 +1,7 @@
 import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
-import { Button, Div, Group, Header } from '@vkontakte/vkui';
+import { Button, Group, Header } from '@vkontakte/vkui';
 import { downloadText } from '../../utils';
 import type { GridLayout } from '../../gridLayout';
 import type { Store } from '../../localStore';
@@ -80,17 +80,17 @@ export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store
 
   return (
     <Group header={<Header>Экспорт</Header>}>
-      <Div className="export-panel__row">
+      <div className="vkui-div export-panel__row">
         <Button size="m" mode="primary" onClick={exportPng}>
           Экспорт PNG
         </Button>
         <Button size="m" mode="secondary" onClick={exportJson}>
           Экспорт JSON
         </Button>
-      </Div>
-      <Div className="small">
+      </div>
+      <div className="vkui-div small">
         Данные хранятся локально (localStorage) и в VK Storage (ключ на год).
-      </Div>
+      </div>
     </Group>
   );
 }

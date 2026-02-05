@@ -3,3 +3,13 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.export-panel__row .vkuiButton {
+  flex: 1 1 calc(50% - 4px);
+}
+
+@media (max-width: 420px) {
+  .export-panel__row .vkuiButton {
+    flex-basis: 100%;
+  }
+}

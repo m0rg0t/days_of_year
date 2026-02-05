@@ -11,7 +11,7 @@
 }
 
 .stats-panel__toggle:hover {
-  border-color: rgba(99,102,241,0.4);
+  border-color: var(--accent-border, rgba(67, 123, 255, 0.35));
 }
 
 .stats-panel__content {
@@ -21,7 +21,7 @@
   padding: 12px 14px;
   border-radius: 12px;
   background: var(--vkui--color_background_secondary_alpha);
-  border: 1px solid rgba(99,102,241,0.1);
+  border: 1px solid var(--accent-border, rgba(67, 123, 255, 0.18));
   backdrop-filter: blur(8px);
 }
 
@@ -77,8 +77,8 @@
 }
 
 .stats-panel__badge--earned {
-  border-color: rgba(99,102,241,0.3);
-  box-shadow: 0 0 8px rgba(99,102,241,0.15);
+  border-color: var(--accent-border, rgba(67, 123, 255, 0.32));
+  box-shadow: 0 0 9px rgba(49, 205, 255, 0.14);
 }
 
 .stats-panel__badge--locked {
@@ -108,3 +108,15 @@
 .stats-panel__mood-dot--green  { background: var(--mood-green-bright, rgba(34, 197, 94, 0.85)); box-shadow: 0 0 6px var(--mood-green-glow, rgba(34,197,94,0.4)); }
 .stats-panel__mood-dot--red    { background: var(--mood-red-bright, rgba(239, 68, 68, 0.85)); box-shadow: 0 0 6px var(--mood-red-glow, rgba(239,68,68,0.4)); }
 .stats-panel__mood-dot--yellow { background: var(--mood-yellow-bright, rgba(234, 179, 8, 0.85)); box-shadow: 0 0 6px var(--mood-yellow-glow, rgba(234,179,8,0.4)); }
+
+@media (max-width: 420px) {
+  .stats-panel__badges {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .stats-panel__badge {
+    min-width: 0;
+    padding: 8px 6px;
+  }
+}

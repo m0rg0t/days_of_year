@@ -1,55 +1,96 @@
 .year-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .year-nav__label {
-  font-size: 20px;
-  font-weight: 600;
-  min-width: 60px;
+  font-size: 30px;
+  font-weight: 800;
+  min-width: 72px;
   text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 .year-nav__button {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   border: 1px solid var(--vkui--color_separator_primary_alpha);
-  background: var(--vkui--color_background_secondary_alpha);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.02)
+  );
   color: var(--vkui--color_text_primary);
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .year-nav__button:hover:not(:disabled) {
-  background: var(--vkui--color_background_secondary_alpha);
-  border-color: rgba(99,102,241,0.5);
+  border-color: var(--accent-border, rgba(67, 123, 255, 0.3));
+  background: linear-gradient(
+    145deg,
+    rgba(67, 123, 255, 0.22),
+    rgba(49, 205, 255, 0.12)
+  );
+}
+
+.year-nav__button:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .year-nav__button:disabled {
-  opacity: 0.3;
+  opacity: 0.28;
   cursor: not-allowed;
 }
 
+.year-nav__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 16px 8px;
+}
+
+.year-nav__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--vkui--color_text_secondary);
+  border: 1px solid var(--vkui--color_separator_primary_alpha);
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .year-nav__progress {
-  height: 8px;
-  border-radius: 4px;
+  height: 10px;
+  border-radius: 999px;
   background: var(--vkui--color_track_background);
-  margin: 0 16px 4px 16px;
+  margin: 0 16px 8px 16px;
   overflow: hidden;
 }
 
 .year-nav__progress-fill {
   height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(90deg, rgba(99,102,241,0.8), rgba(168,85,247,0.8));
-  box-shadow: 0 0 8px var(--accent-glow, rgba(99,102,241,0.3));
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(67, 123, 255, 0.9), rgba(49, 205, 255, 0.85));
+  box-shadow: 0 0 10px var(--accent-glow, rgba(49, 205, 255, 0.3));
   transition: width 0.8s ease;
+}
+
+@media (min-width: 600px) {
+  .year-nav {
+    max-width: 420px;
+    margin: 0 auto;
+  }
 }

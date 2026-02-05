@@ -62,8 +62,8 @@
 }
 
 .export-card__dot--today {
-  border-color: var(--accent, rgba(99, 102, 241, 0.9));
-  box-shadow: 0 0 0 2px var(--accent-dim, rgba(99, 102, 241, 0.25));
+  border-color: var(--accent, rgba(67, 123, 255, 0.95));
+  box-shadow: 0 0 0 2px var(--accent-dim, rgba(67, 123, 255, 0.25));
 }
 
 .export-card__dot--mood-blue { background: var(--mood-blue, rgba(59, 130, 246, 0.75)); border-color: var(--mood-blue-border, rgba(59, 130, 246, 0.9)); }

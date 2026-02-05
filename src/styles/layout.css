@@ -1,7 +1,13 @@
 .app-layout {
   display: grid;
   gap: 12px;
-  padding: 0 12px 16px;
+  padding: 0 12px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.app-hero .vkuiGroup__inner {
+  background:
+    radial-gradient(120% 130% at 8% -12%, rgba(67, 123, 255, 0.26), rgba(67, 123, 255, 0) 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
 }
 
 .app-layout__side {
@@ -9,32 +15,122 @@
   gap: 12px;
 }
 
+.app-layout__grid-col {
+  min-width: 0;
+}
+
 .calendar-controls {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
-  flex-wrap: wrap;
   padding-top: 4px;
 }
 
+.calendar-controls .vkuiButton {
+  width: 100%;
+  min-height: 40px;
+}
+
 .calendar-controls__density {
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-controls__hint {
+  padding-top: 0;
+  margin-top: -4px;
 }
 
 .story-share {
   display: flex;
   align-items: center;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
 }
 
 .story-share .vkuiButton {
   width: 100%;
+  min-height: 46px;
+  font-weight: 600;
+}
+
+.mobile-day-shortcut .vkuiButton {
+  min-height: 42px;
+}
+
+.mobile-month-nav {
+  padding-top: 4px;
+  padding-bottom: 6px;
+}
+
+.mobile-month-nav__list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mobile-month-nav__list::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-month-nav__chip {
+  border: 1px solid var(--vkui--color_separator_primary_alpha);
+  background: var(--vkui--color_background_secondary_alpha);
+  color: var(--vkui--color_text_secondary);
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.mobile-month-nav__chip--active {
+  color: var(--vkui--color_text_primary);
+  border-color: var(--accent-border, rgba(67, 123, 255, 0.35));
+  background:
+    linear-gradient(145deg, rgba(67, 123, 255, 0.2), rgba(49, 205, 255, 0.12));
+}
+
+.mobile-day-shortcut__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.mobile-day-shortcut__arrow {
+  min-width: 46px;
+}
+
+.mobile-day-shortcut__meta {
+  margin-top: 8px;
+  text-align: center;
 }
 
 @media (min-width: 600px) {
+  .calendar-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .calendar-controls .vkuiButton {
+    width: auto;
+  }
+
   .calendar-controls__density {
+    display: flex;
+    gap: 6px;
     margin-left: auto;
+  }
+
+  .calendar-controls__hint {
+    margin-top: -2px;
   }
 
   .story-share .vkuiButton {
@@ -43,12 +139,25 @@
 }
 
 @media (min-width: 960px) {
+  .app-hero,
+  .app-layout {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    box-sizing: border-box;
+  }
+
   .app-layout {
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.95fr);
     align-items: start;
   }
 
+  .app-layout__grid-col {
+    grid-column: 1;
+  }
+
   .app-layout__side {
+    grid-column: 2;
     position: sticky;
     top: 72px;
   }

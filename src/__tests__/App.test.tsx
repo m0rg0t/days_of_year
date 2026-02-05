@@ -337,6 +337,22 @@ describe('App', () => {
     expect(quoteBlock.textContent!.length).toBeGreaterThan(0);
   });
 
+  it('shows month quick jumps on mobile and jumps to month start', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      render(<App />);
+      fireEvent.click(screen.getByLabelText('jump-month-8'));
+      expect(screen.getByText(/2026-08-01/)).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    }
+  });
+
   it('stats toggle shows and hides stats panel', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));

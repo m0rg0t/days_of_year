@@ -1,4 +1,3 @@
-import { Div, SimpleCell } from '@vkontakte/vkui';
 import './YearNav.css';
 
 interface YearNavProps {
@@ -15,13 +14,13 @@ export function YearNav({ viewYear, currentYear, todayIndex, totalDays, onChange
 
   return (
     <>
-      <Div className="year-nav">
+      <div className="vkui-div year-nav">
         <button
           className="year-nav__button"
           onClick={() => onChangeYear(viewYear - 1)}
           aria-label="prev-year"
         >
-          ←
+          <span aria-hidden>←</span>
         </button>
         <span className="year-nav__label">{viewYear}</span>
         <button
@@ -30,14 +29,15 @@ export function YearNav({ viewYear, currentYear, todayIndex, totalDays, onChange
           disabled={viewYear >= currentYear}
           aria-label="next-year"
         >
-          →
+          <span aria-hidden>→</span>
         </button>
-      </Div>
+      </div>
       {isCurrentYear && (
         <>
-          <SimpleCell>
-            Сегодня: {todayIndex}/{totalDays} · Осталось: {left}
-          </SimpleCell>
+          <div className="year-nav__meta">
+            <span className="year-nav__chip">Сегодня: {todayIndex}/{totalDays}</span>
+            <span className="year-nav__chip">Осталось: {left}</span>
+          </div>
           <div className="year-nav__progress">
             <div className="year-nav__progress-fill" style={{ width: `${(todayIndex / totalDays) * 100}%` }} />
           </div>

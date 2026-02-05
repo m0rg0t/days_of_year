@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Div } from '@vkontakte/vkui';
 import type { YearStats } from '../../stats';
 import type { Badge } from '../../badges';
 import { MOODS } from '../../utils';
@@ -15,7 +14,7 @@ export function StatsPanel({ yearStats, badges }: StatsPanelProps) {
 
   return (
     <>
-      <Div>
+      <div className="vkui-div">
         <button
           className="stats-panel__toggle"
           onClick={() => setShowStats((s) => !s)}
@@ -23,9 +22,9 @@ export function StatsPanel({ yearStats, badges }: StatsPanelProps) {
         >
           {showStats ? 'Скрыть статистику' : 'Показать статистику'}
         </button>
-      </Div>
+      </div>
       {showStats && (
-        <Div>
+        <div className="vkui-div">
           <div className="stats-panel__content" data-testid="stats-panel">
             <div className="stats-panel__row">
               <span>Заполнено дней</span>
@@ -79,7 +78,7 @@ export function StatsPanel({ yearStats, badges }: StatsPanelProps) {
               </div>
             ))}
           </div>
-        </Div>
+        </div>
       )}
     </>
   );

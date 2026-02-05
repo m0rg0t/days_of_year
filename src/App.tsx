@@ -7,7 +7,6 @@ import {
   Group,
   Header,
   Button,
-  Div,
   Panel,
   PanelHeader,
   PanelHeaderButton,
@@ -22,7 +21,7 @@ import bridge from '@vkontakte/vk-bridge';
 
 import './styles/global.css';
 import './styles/layout.css';
-import { dateKeyForDayIndex, dayOfYear, daysInYear } from './utils';
+import { dateKeyForDayIndex, dayOfYear, daysInYear, monthStartIndices } from './utils';
 import { computeYearStats } from './stats';
 import { getEarnedBadges } from './badges';
 import { loadYearBlobFromVk, createVkYearBlobWriter } from './vkYearStorage';
@@ -97,6 +96,22 @@ export default function App() {
   const isSelectedPastOrToday = todayIndex > 0 && selectedDayIndex <= todayIndex;
   const isSelectedEditable = viewYear < currentYear || isSelectedPastOrToday;
   const isToday = viewYear === currentYear && selectedDayIndex === todayIndex;
+  const canGoPrevDay = selectedDayIndex > 1;
+  const canGoNextDay = selectedDayIndex < totalDays;
+  const selectedMonthIndex = useMemo(
+    () => new Date(viewYear, 0, selectedDayIndex).getMonth(),
+    [viewYear, selectedDayIndex],
+  );
+  const gridHint = isDesktop
+    ? 'Нажмите на день, чтобы открыть карточку справа.'
+    : 'Коснитесь дня, затем откройте карточку кнопкой ниже (повторный тап тоже откроет).';
+  const monthQuickJumps = useMemo(
+    () => Array
+      .from(monthStartIndices(viewYear).entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([dayIndex, label], monthIndex) => ({ dayIndex, label, monthIndex })),
+    [viewYear],
+  );
 
   const dateKeys = useMemo(
     () => Array.from({ length: totalDays }).map((_, i) => dateKeyForDayIndex(viewYear, i + 1)),
@@ -116,11 +131,24 @@ export default function App() {
   const closeModal = useCallback(() => setActiveModal(null), []);
 
   const handleSelectDay = useCallback((dayIndex: number) => {
-    setSelectedDayIndex(dayIndex);
-    if (!isDesktop) {
+    if (!isDesktop && dayIndex === selectedDayIndex) {
       setActiveModal(DAY_DETAIL_MODAL);
+      return;
     }
-  }, [isDesktop]);
+    setSelectedDayIndex(dayIndex);
+  }, [isDesktop, selectedDayIndex]);
+
+  const goPrevDay = useCallback(() => {
+    setSelectedDayIndex((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const goNextDay = useCallback(() => {
+    setSelectedDayIndex((prev) => Math.min(totalDays, prev + 1));
+  }, [totalDays]);
+
+  const jumpToMonthStart = useCallback((dayIndex: number) => {
+    setSelectedDayIndex(dayIndex);
+  }, []);
 
   const shareToStory = useCallback(async () => {
     if (isSharingStory) return;
@@ -201,8 +229,8 @@ export default function App() {
                 <Panel id="main">
                   <PanelHeader>Дни года</PanelHeader>
 
-                  <Group header={<Header>«Этот день — один из твоих 365.»</Header>}>
-                    <Div className="story-share">
+                  <Group className="app-hero" header={<Header>«Этот день — один из твоих 365.»</Header>}>
+                    <div className="vkui-div story-share">
                       <Button
                         size="m"
                         mode="primary"
@@ -212,7 +240,7 @@ export default function App() {
                       >
                         Поделиться в историю
                       </Button>
-                    </Div>
+                    </div>
                     <YearNav
                       viewYear={viewYear}
                       currentYear={currentYear}
@@ -223,8 +251,9 @@ export default function App() {
                   </Group>
 
                   <div className="app-layout">
-                    <Group className="app-layout__grid" header={<Header>Календарь</Header>}>
-                      <Div className="calendar-controls">
+                    <div className="app-layout__grid-col">
+                      <Group className="app-layout__grid" header={<Header>Календарь</Header>}>
+                      <div className="vkui-div calendar-controls">
                         <Button
                           size="s"
                           mode="secondary"
@@ -249,7 +278,8 @@ export default function App() {
                             Компакт
                           </Button>
                         </div>
-                      </Div>
+                      </div>
+                      <div className="vkui-div calendar-controls__hint small">{gridHint}</div>
                       <DayGrid
                         dateKeys={dateKeys}
                         days={store.days}
@@ -259,7 +289,61 @@ export default function App() {
                         gridRef={gridRef}
                         onSelectDay={handleSelectDay}
                       />
-                    </Group>
+                      {!isDesktop && (
+                        <div className="vkui-div mobile-month-nav">
+                          <div className="mobile-month-nav__list" role="list">
+                            {monthQuickJumps.map((month) => (
+                              <button
+                                key={month.label}
+                                className={`mobile-month-nav__chip ${month.monthIndex === selectedMonthIndex ? 'mobile-month-nav__chip--active' : ''}`}
+                                onClick={() => jumpToMonthStart(month.dayIndex)}
+                                aria-label={`jump-month-${month.monthIndex + 1}`}
+                              >
+                                {month.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {!isDesktop && (
+                        <div className="vkui-div mobile-day-shortcut">
+                          <div className="mobile-day-shortcut__row">
+                            <Button
+                              size="m"
+                              mode="secondary"
+                              className="mobile-day-shortcut__arrow"
+                              disabled={!canGoPrevDay}
+                              aria-label="previous-day"
+                              onClick={goPrevDay}
+                            >
+                              ←
+                            </Button>
+                            <Button
+                              size="m"
+                              mode="primary"
+                              stretched
+                              onClick={() => setActiveModal(DAY_DETAIL_MODAL)}
+                            >
+                              Открыть день
+                            </Button>
+                            <Button
+                              size="m"
+                              mode="secondary"
+                              className="mobile-day-shortcut__arrow"
+                              disabled={!canGoNextDay}
+                              aria-label="next-day"
+                              onClick={goNextDay}
+                            >
+                              →
+                            </Button>
+                          </div>
+                          <div className="mobile-day-shortcut__meta small">
+                            {selectedKey} · {selectedDayIndex}/{totalDays}
+                          </div>
+                        </div>
+                      )}
+                      </Group>
+                    </div>
 
                     <div className="app-layout__side">
                       {isDesktop && (
