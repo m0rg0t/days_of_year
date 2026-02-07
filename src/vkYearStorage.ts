@@ -6,10 +6,16 @@ export type DayData = {
   word?: string;
 };
 
-const KEY_PREFIX = 'doy:'; // doy:YYYY
+const KEY_PREFIX = 'doy:'; // doy:YYYY (legacy) or doy:YYYY:MM (monthly)
 
+/** Legacy whole-year key: `doy:YYYY` */
 export function yearKey(year: number) {
   return `${KEY_PREFIX}${year}`;
+}
+
+/** Monthly chunk key: `doy:YYYY:MM` (MM is zero-padded) */
+export function monthKey(year: number, month: number) {
+  return `${KEY_PREFIX}${year}:${String(month).padStart(2, '0')}`;
 }
 
 function safeParse(raw: string | undefined | null): Record<string, DayData> | null {
@@ -23,16 +29,53 @@ function safeParse(raw: string | undefined | null): Record<string, DayData> | nu
   }
 }
 
+/**
+ * Load year data from VK Storage.
+ * Reads 12 monthly keys + 1 legacy key in a single VKWebAppStorageGet call.
+ * If monthly keys have data, uses them. Otherwise falls back to legacy key (migration).
+ */
 export async function loadYearBlobFromVk(year: number): Promise<Record<string, DayData>> {
   try {
-    const res = await bridge.send('VKWebAppStorageGet', { keys: [yearKey(year)] });
+    const monthKeys = Array.from({ length: 12 }, (_, i) => monthKey(year, i + 1));
+    const legacyKey = yearKey(year);
+    const allKeys = [...monthKeys, legacyKey];
+
+    const res = await bridge.send('VKWebAppStorageGet', { keys: allKeys });
     const items = res?.keys ?? [];
-    const item = items.find((it) => it.key === yearKey(year));
-    const parsed = safeParse(item?.value);
-    return parsed ?? {};
+
+    // Parse monthly chunks
+    const merged: Record<string, DayData> = {};
+    let hasMonthlyData = false;
+
+    for (const mk of monthKeys) {
+      const item = items.find((it) => it.key === mk);
+      const parsed = safeParse(item?.value);
+      if (parsed) {
+        hasMonthlyData = true;
+        Object.assign(merged, parsed);
+      }
+    }
+
+    if (hasMonthlyData) return merged;
+
+    // Fallback: legacy single-blob key (pre-migration data)
+    const legacyItem = items.find((it) => it.key === legacyKey);
+    const legacyParsed = safeParse(legacyItem?.value);
+    return legacyParsed ?? {};
   } catch {
     return {};
   }
+}
+
+/** Group day entries by month number (1-12) parsed from date key `YYYY-MM-DD`. */
+function groupByMonth(days: Record<string, DayData>): Map<number, Record<string, DayData>> {
+  const groups = new Map<number, Record<string, DayData>>();
+  for (const [key, value] of Object.entries(days)) {
+    const month = parseInt(key.slice(5, 7), 10); // "YYYY-MM-DD" → MM
+    if (!groups.has(month)) groups.set(month, {});
+    groups.get(month)![key] = value;
+  }
+  return groups;
 }
 
 export function createVkYearBlobWriter(year: number) {
@@ -47,10 +90,28 @@ export function createVkYearBlobWriter(year: number) {
     pending = null;
 
     try {
-      await bridge.send('VKWebAppStorageSet', {
-        key: yearKey(year),
-        value: JSON.stringify(payload),
-      });
+      const groups = groupByMonth(payload);
+
+      // Write each month chunk in parallel
+      const writes: Promise<unknown>[] = [];
+      for (const [month, monthDays] of groups) {
+        writes.push(
+          bridge.send('VKWebAppStorageSet', {
+            key: monthKey(year, month),
+            value: JSON.stringify(monthDays),
+          }),
+        );
+      }
+
+      // Clear legacy key to complete migration
+      writes.push(
+        bridge.send('VKWebAppStorageSet', {
+          key: yearKey(year),
+          value: '',
+        }),
+      );
+
+      await Promise.all(writes);
     } catch {
       // ignore: localStorage remains fallback
     }
@@ -60,6 +121,7 @@ export function createVkYearBlobWriter(year: number) {
     /**
      * Queue full-year blob update (debounced).
      * Caller passes the full year map (dateKey -> DayData).
+     * Internally splits into monthly chunks for VK Storage.
      */
     setYear(days: Record<string, DayData>) {
       pending = days;
