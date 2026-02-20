@@ -61,6 +61,7 @@
 .mobile-month-nav {
   padding-top: 4px;
   padding-bottom: 6px;
+  overflow: hidden;
 }
 
 .mobile-month-nav__list {
@@ -98,9 +99,15 @@
 
 .mobile-day-shortcut__row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
   gap: 8px;
   align-items: center;
+}
+
+.mobile-day-shortcut__row .vkuiButton {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-day-shortcut__arrow {
@@ -133,8 +140,22 @@
     margin-top: -2px;
   }
 
+  .story-share {
+    justify-content: center;
+  }
+
   .story-share .vkuiButton {
     width: auto;
+    max-width: 320px;
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-month-nav__chip {
+    padding: 0 8px;
+    font-size: 11px;
+    min-height: 30px;
   }
 }
 

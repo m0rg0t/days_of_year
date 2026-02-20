@@ -6,6 +6,8 @@ export interface BadgeDef {
   title: string;
   description: string;
   check: (stats: YearStats) => boolean;
+  /** The stat field and numeric target used by `check`, for progress display. */
+  threshold: { field: 'filledDays' | 'longestStreak'; value: number };
 }
 
 export interface Badge extends BadgeDef {
@@ -19,6 +21,7 @@ export const BADGE_DEFS: BadgeDef[] = [
     title: 'Первый день',
     description: '1 день с настроением',
     check: (s) => s.filledDays >= 1,
+    threshold: { field: 'filledDays', value: 1 },
   },
   {
     id: 'week-streak',
@@ -26,6 +29,7 @@ export const BADGE_DEFS: BadgeDef[] = [
     title: 'Первая неделя',
     description: 'Стрик 7 дней',
     check: (s) => s.longestStreak >= 7,
+    threshold: { field: 'longestStreak', value: 7 },
   },
   {
     id: 'month-streak',
@@ -33,6 +37,7 @@ export const BADGE_DEFS: BadgeDef[] = [
     title: 'Месяц',
     description: 'Стрик 30 дней',
     check: (s) => s.longestStreak >= 30,
+    threshold: { field: 'longestStreak', value: 30 },
   },
   {
     id: 'hundred-days',
@@ -40,6 +45,7 @@ export const BADGE_DEFS: BadgeDef[] = [
     title: '100 дней',
     description: '100 заполненных дней',
     check: (s) => s.filledDays >= 100,
+    threshold: { field: 'filledDays', value: 100 },
   },
   {
     id: 'half-year',
@@ -47,6 +53,7 @@ export const BADGE_DEFS: BadgeDef[] = [
     title: 'Полгода',
     description: '183 заполненных дня',
     check: (s) => s.filledDays >= 183,
+    threshold: { field: 'filledDays', value: 183 },
   },
   {
     id: 'full-year',
@@ -54,6 +61,7 @@ export const BADGE_DEFS: BadgeDef[] = [
     title: 'Полный год',
     description: '365 заполненных дней',
     check: (s) => s.filledDays >= 365,
+    threshold: { field: 'filledDays', value: 365 },
   },
 ];
 

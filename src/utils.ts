@@ -1,6 +1,13 @@
 export const MOODS = ['blue', 'green', 'red', 'yellow'] as const;
 export type Mood = typeof MOODS[number];
 
+export const MOOD_LABELS: Record<Mood, string> = {
+  blue: 'Спокойствие',
+  green: 'Энергия',
+  red: 'Стресс',
+  yellow: 'Радость',
+};
+
 export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }

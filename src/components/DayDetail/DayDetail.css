@@ -29,22 +29,29 @@
 
 .day-detail__mood-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
 .day-detail__mood-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
+  min-width: 36px;
+  border-radius: 12px;
   border: 2px solid transparent;
   background: transparent;
   cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 0;
+  gap: 4px;
+  padding: 6px 4px;
   transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.day-detail__mood-label {
+  font-size: 9px;
+  line-height: 1.15;
+  color: var(--vkui--color_text_secondary);
+  white-space: nowrap;
 }
 
 .day-detail__mood-btn:hover {

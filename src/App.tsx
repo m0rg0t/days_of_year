@@ -33,6 +33,7 @@ import { useGridLayout } from './hooks/useGridLayout';
 import { useVkTheme } from './hooks/useVkTheme';
 import { useIsDesktop } from './hooks/useIsDesktop';
 import { createStoryImageDataUrl } from './storyImage';
+import { isDesktopWeb as checkDesktopWeb } from './vkPlatform';
 
 import { YearNav } from './components/YearNav/YearNav';
 import { DayGrid } from './components/DayGrid/DayGrid';
@@ -60,6 +61,7 @@ export default function App() {
 
   const { gridRef, gridLayout } = useGridLayout(gridDensity);
   const isDesktop = useIsDesktop();
+  const showDesktopExports = useMemo(() => checkDesktopWeb(), []);
   const vkYearWriterRef = useRef(createVkYearBlobWriter(viewYear));
 
   const changeYear = useCallback((year: number) => {
@@ -287,6 +289,7 @@ export default function App() {
                         selectedDayIndex={selectedDayIndex}
                         gridLayout={gridLayout}
                         gridRef={gridRef}
+                        viewYear={viewYear}
                         onSelectDay={handleSelectDay}
                       />
                       {!isDesktop && (
@@ -324,7 +327,7 @@ export default function App() {
                               stretched
                               onClick={() => setActiveModal(DAY_DETAIL_MODAL)}
                             >
-                              Открыть день
+                              Открыть
                             </Button>
                             <Button
                               size="m"
@@ -361,7 +364,7 @@ export default function App() {
                       )}
 
                       <Group header={<Header>Статистика</Header>}>
-                        <StatsPanel yearStats={yearStats} badges={badges} />
+                        <StatsPanel yearStats={yearStats} badges={badges} isDesktop={isDesktop} />
                       </Group>
 
                       <ExportPanel
@@ -371,6 +374,7 @@ export default function App() {
                         gridLayout={gridLayout}
                         store={store}
                         dateKeys={dateKeys}
+                        isDesktopWeb={showDesktopExports}
                       />
                     </div>
                   </div>

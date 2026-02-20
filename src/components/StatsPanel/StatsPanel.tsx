@@ -7,10 +7,11 @@ import './StatsPanel.css';
 interface StatsPanelProps {
   yearStats: YearStats;
   badges: Badge[];
+  isDesktop: boolean;
 }
 
-export function StatsPanel({ yearStats, badges }: StatsPanelProps) {
-  const [showStats, setShowStats] = useState(false);
+export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
+  const [showStats, setShowStats] = useState(isDesktop);
 
   return (
     <>
@@ -67,16 +68,25 @@ export function StatsPanel({ yearStats, badges }: StatsPanelProps) {
             )}
           </div>
           <div className="stats-panel__badges" data-testid="badges-row">
-            {badges.map((badge) => (
-              <div
-                key={badge.id}
-                className={`stats-panel__badge ${badge.earned ? 'stats-panel__badge--earned' : 'stats-panel__badge--locked'}`}
-                title={`${badge.title}: ${badge.description}`}
-              >
-                <span className="stats-panel__badge-emoji">{badge.emoji}</span>
-                <span className="stats-panel__badge-title">{badge.title}</span>
-              </div>
-            ))}
+            {badges.map((badge) => {
+              const current = yearStats[badge.threshold.field];
+              const target = badge.threshold.value;
+              return (
+                <div
+                  key={badge.id}
+                  className={`stats-panel__badge ${badge.earned ? 'stats-panel__badge--earned' : 'stats-panel__badge--locked'}`}
+                  title={`${badge.title}: ${badge.description}`}
+                >
+                  <span className="stats-panel__badge-emoji">{badge.emoji}</span>
+                  <span className="stats-panel__badge-title">{badge.title}</span>
+                  {!badge.earned && (
+                    <span className="stats-panel__badge-progress">
+                      {current}/{target}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -1,3 +1,16 @@
+/* ── Year transition animation ─────────────── */
+
+@keyframes yearFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .day-grid {
   padding: 12px 14px 10px;
   display: flex;
@@ -8,6 +21,7 @@
   background:
     radial-gradient(140% 180% at 0% 0%, rgba(67, 123, 255, 0.16), rgba(67, 123, 255, 0) 40%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01));
+  animation: yearFade 200ms ease-out;
 }
 
 @media (min-width: 960px) {
@@ -30,10 +44,35 @@
   max-height: 100%;
 }
 
+/* ── Month labels ──────────────────────────── */
+
+.day-grid__month-label {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--vkui--color_text_secondary);
+  margin-bottom: -2px;
+  padding-top: 2px;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── Cells & dots ──────────────────────────── */
+
 .day-grid__cell {
   position: relative;
   width: var(--cell);
   height: var(--cell);
+}
+
+/* ── Dot entrance animation ────────────────── */
+
+@keyframes dotFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .day-grid__dot {
@@ -48,6 +87,8 @@
   position: relative;
   outline: none;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  animation: dotFadeIn 120ms ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 0.4ms);
 }
 
 .day-grid__dot:hover {
@@ -87,8 +128,36 @@
 .day-grid__dot--mood-red { background: var(--mood-red); border-color: var(--mood-red-border); }
 .day-grid__dot--mood-yellow { background: var(--mood-yellow); border-color: var(--mood-yellow-border); }
 
+/* ── Word indicator ────────────────────────── */
+
+.day-grid__dot--has-word.day-grid__dot--filled::after,
+.day-grid__dot--has-word.day-grid__dot--today::after,
+.day-grid__dot--has-word[class*="day-grid__dot--mood-"]::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  inset: 0;
+  margin: auto;
+  pointer-events: none;
+}
+
 @media (hover: none) {
   .day-grid__dot:hover {
     transform: none;
+  }
+}
+
+/* ── Reduce motion ─────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .day-grid__dot {
+    animation: none;
+  }
+
+  .day-grid {
+    animation: none;
   }
 }

@@ -46,6 +46,11 @@ vi.mock('../vkAds', () => ({
   hideBannerAd: vi.fn(async () => true),
 }));
 
+vi.mock('../vkPlatform', () => ({
+  isDesktopWeb: vi.fn(() => true),
+  getVkPlatform: vi.fn(() => 'desktop_web'),
+}));
+
 import App from '../App';
 
 afterEach(() => {
@@ -357,18 +362,26 @@ describe('App', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
-    render(<App />);
-    // Stats panel hidden initially
-    expect(screen.queryByTestId('stats-panel')).toBeNull();
+    // On mobile, stats start collapsed
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
 
-    // Click toggle to show
-    fireEvent.click(screen.getByLabelText('toggle-stats'));
-    expect(screen.getByTestId('stats-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('badges-row')).toBeInTheDocument();
+    try {
+      render(<App />);
+      // Stats panel hidden initially on mobile
+      expect(screen.queryByTestId('stats-panel')).toBeNull();
 
-    // Click toggle to hide
-    fireEvent.click(screen.getByLabelText('toggle-stats'));
-    expect(screen.queryByTestId('stats-panel')).toBeNull();
+      // Click toggle to show
+      fireEvent.click(screen.getByLabelText('toggle-stats'));
+      expect(screen.getByTestId('stats-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('badges-row')).toBeInTheDocument();
+
+      // Click toggle to hide
+      fireEvent.click(screen.getByLabelText('toggle-stats'));
+      expect(screen.queryByTestId('stats-panel')).toBeNull();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    }
   });
 
   it('stats panel shows correct data with filled days', () => {
@@ -386,7 +399,7 @@ describe('App', () => {
     }));
 
     render(<App />);
-    fireEvent.click(screen.getByLabelText('toggle-stats'));
+    // On desktop (default test env), stats are open by default — no toggle needed
     expect(screen.getByText(/3 \/ 30/)).toBeInTheDocument();
   });
 
@@ -406,5 +419,76 @@ describe('App', () => {
     const dayWithMood = grid.querySelector('button[aria-label="2026-01-01"]');
     expect(dayWithMood).toBeTruthy();
     expect(dayWithMood!.className).toContain('mood-blue');
+  });
+
+  it('hides PNG/JSON export buttons when not on desktop_web', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    const { isDesktopWeb } = await import('../vkPlatform');
+    vi.mocked(isDesktopWeb).mockReturnValue(false);
+
+    render(<App />);
+    expect(screen.queryByText('Экспорт PNG')).toBeNull();
+    expect(screen.queryByText('Экспорт JSON')).toBeNull();
+    expect(screen.getByText('Поделиться')).toBeInTheDocument();
+
+    vi.mocked(isDesktopWeb).mockReturnValue(true);
+  });
+
+  it('VK Storage data takes priority over localStorage', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    localStorage.setItem('days_of_year:v1', JSON.stringify({
+      version: 1,
+      year: 2026,
+      days: { '2026-01-01': { mood: 'blue', word: 'local' } },
+    }));
+
+    loadYearBlobFromVkMock.mockResolvedValueOnce({
+      '2026-01-01': { mood: 'green', word: 'vk' },
+    });
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const grid = screen.getByLabelText('days-grid');
+    const first = grid.querySelector('button[aria-label="2026-01-01"]');
+    fireEvent.click(first!);
+
+    const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
+    expect(input.value).toBe('vk');
+  });
+
+  it('uses localStorage when VK Storage returns empty', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    localStorage.setItem('days_of_year:v1', JSON.stringify({
+      version: 1,
+      year: 2026,
+      days: { '2026-01-01': { mood: 'red', word: 'fallback' } },
+    }));
+
+    loadYearBlobFromVkMock.mockResolvedValueOnce({});
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const grid = screen.getByLabelText('days-grid');
+    const first = grid.querySelector('button[aria-label="2026-01-01"]');
+    fireEvent.click(first!);
+
+    const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
+    expect(input.value).toBe('fallback');
   });
 });

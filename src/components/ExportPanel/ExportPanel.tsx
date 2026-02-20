@@ -15,6 +15,7 @@ interface ExportPanelProps {
   gridLayout: GridLayout;
   store: Store;
   dateKeys: string[];
+  isDesktopWeb: boolean;
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -34,7 +35,7 @@ async function uploadToTelegraph(blob: Blob, filename: string): Promise<string> 
   return `https://telegra.ph${data[0].src}`;
 }
 
-export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store, dateKeys }: ExportPanelProps) {
+export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store, dateKeys, isDesktopWeb }: ExportPanelProps) {
   async function exportPng() {
     const host = document.createElement('div');
     host.style.position = 'fixed';
@@ -135,12 +136,16 @@ export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store
   return (
     <Group header={<Header>Экспорт</Header>}>
       <div className="vkui-div export-panel__row">
-        <Button size="m" mode="primary" onClick={exportPng}>
-          Экспорт PNG
-        </Button>
-        <Button size="m" mode="secondary" onClick={exportJson}>
-          Экспорт JSON
-        </Button>
+        {isDesktopWeb && (
+          <Button size="m" mode="primary" onClick={exportPng}>
+            Экспорт PNG
+          </Button>
+        )}
+        {isDesktopWeb && (
+          <Button size="m" mode="secondary" onClick={exportJson}>
+            Экспорт JSON
+          </Button>
+        )}
         <Button size="m" mode="secondary" onClick={shareVk}>
           Поделиться
         </Button>

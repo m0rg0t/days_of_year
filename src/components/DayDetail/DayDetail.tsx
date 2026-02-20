@@ -1,6 +1,7 @@
 import { Group, Header, Input } from '@vkontakte/vkui';
 import { getQuoteForDate } from '../../quotes';
-import { MOODS } from '../../utils';
+import { MOODS, MOOD_LABELS } from '../../utils';
+import { hapticSuccess } from '../../haptics';
 import type { DayData } from '../../vkYearStorage';
 import './DayDetail.css';
 
@@ -23,6 +24,11 @@ export function DayDetail({
   dayData,
   onUpdateDay,
 }: DayDetailProps) {
+  const handleMoodSet = (mood: typeof MOODS[number] | undefined) => {
+    if (mood !== undefined) hapticSuccess();
+    onUpdateDay(selectedKey, { mood });
+  };
+
   return (
     <>
       <div className="vkui-div">
@@ -44,15 +50,16 @@ export function DayDetail({
                 <button
                   key={mood}
                   className={`day-detail__mood-btn ${dayData.mood === mood ? 'day-detail__mood-btn--active' : ''}`}
-                  onClick={() => onUpdateDay(selectedKey, { mood })}
+                  onClick={() => handleMoodSet(mood)}
                   aria-label={`mood-${mood}`}
                 >
                   <span className={`day-detail__mood-dot day-detail__mood-dot--${mood}`} />
+                  <span className="day-detail__mood-label">{MOOD_LABELS[mood]}</span>
                 </button>
               ))}
               <button
                 className="day-detail__mood-btn"
-                onClick={() => onUpdateDay(selectedKey, { mood: undefined })}
+                onClick={() => handleMoodSet(undefined)}
                 aria-label="mood-reset"
               >
                 <span className="day-detail__mood-reset">✕</span>

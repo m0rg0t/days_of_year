@@ -98,6 +98,13 @@
   line-height: 1.2;
 }
 
+.stats-panel__badge-progress {
+  font-size: 9px;
+  color: var(--vkui--color_text_secondary);
+  opacity: 0.8;
+  line-height: 1;
+}
+
 .stats-panel__mood-dot {
   width: 20px;
   height: 20px;

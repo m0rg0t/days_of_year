@@ -1,4 +1,6 @@
-import { moodClass } from '../../utils';
+import { Fragment, useMemo } from 'react';
+import { moodClass, monthStartIndices } from '../../utils';
+import { hapticSelection } from '../../haptics';
 import type { GridLayout } from '../../gridLayout';
 import type { DayData } from '../../vkYearStorage';
 import './DayGrid.css';
@@ -10,6 +12,7 @@ interface DayGridProps {
   selectedDayIndex: number;
   gridLayout: GridLayout;
   gridRef: React.RefObject<HTMLDivElement | null>;
+  viewYear: number;
   onSelectDay: (dayIndex: number) => void;
 }
 
@@ -28,10 +31,18 @@ export function DayGrid({
   selectedDayIndex,
   gridLayout,
   gridRef,
+  viewYear,
   onSelectDay,
 }: DayGridProps) {
+  const monthStarts = useMemo(() => monthStartIndices(viewYear), [viewYear]);
+
+  const handleSelectDay = (dayIndex: number) => {
+    hapticSelection();
+    onSelectDay(dayIndex);
+  };
+
   return (
-    <div className="day-grid">
+    <div className="day-grid" key={viewYear}>
       <div
         className="day-grid__grid"
         ref={gridRef}
@@ -44,6 +55,8 @@ export function DayGrid({
           const filled = dayIndex < todayIndex;
           const todayDay = dayIndex === todayIndex;
           const mood = moodClass(data?.mood);
+          const hasWord = !!(data?.word);
+          const monthLabel = monthStarts.get(dayIndex);
 
           const cls = [
             'day-grid__dot',
@@ -51,19 +64,30 @@ export function DayGrid({
             todayDay ? 'day-grid__dot--today' : '',
             dayIndex === selectedDayIndex ? 'day-grid__dot--selected' : '',
             mood ? `day-grid__dot--${mood}` : '',
+            hasWord ? 'day-grid__dot--has-word' : '',
           ]
             .filter(Boolean)
             .join(' ');
 
           return (
-            <div key={key} className="day-grid__cell">
-              <button
-                className={cls}
-                onClick={() => onSelectDay(dayIndex)}
-                title={key}
-                aria-label={key}
-              />
-            </div>
+            <Fragment key={key}>
+              {monthLabel && (
+                <span className="day-grid__month-label">
+                  {monthLabel}
+                </span>
+              )}
+              <div
+                className="day-grid__cell"
+                style={{ '--i': i } as React.CSSProperties}
+              >
+                <button
+                  className={cls}
+                  onClick={() => handleSelectDay(dayIndex)}
+                  title={key}
+                  aria-label={key}
+                />
+              </div>
+            </Fragment>
           );
         })}
       </div>
