@@ -1,6 +1,6 @@
 import type { YearStats } from './stats';
 
-export interface BadgeDef {
+interface BadgeDef {
   id: string;
   emoji: string;
   title: string;

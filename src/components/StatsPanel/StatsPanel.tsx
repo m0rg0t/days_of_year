@@ -12,6 +12,11 @@ interface StatsPanelProps {
 
 export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
   const [showStats, setShowStats] = useState(isDesktop);
+  const [prevIsDesktop, setPrevIsDesktop] = useState(isDesktop);
+  if (isDesktop !== prevIsDesktop) {
+    setPrevIsDesktop(isDesktop);
+    setShowStats(isDesktop);
+  }
 
   return (
     <>

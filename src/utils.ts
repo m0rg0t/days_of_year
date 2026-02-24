@@ -23,7 +23,7 @@ export function dayOfYear(d: Date): number {
   return Math.floor(diff / oneDay);
 }
 
-export function pad2(n: number): string {
+function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
