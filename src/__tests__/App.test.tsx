@@ -18,6 +18,7 @@ import bridge from '@vkontakte/vk-bridge';
 
 vi.mock('html2canvas', () => ({
   default: vi.fn(async () => ({
+    toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(['png'], { type: 'image/png' })),
     toDataURL: () => 'data:image/png;base64,xxx',
   })),
 }));
@@ -166,11 +167,15 @@ describe('App', () => {
     fireEvent.change(input, { target: { value: 'фокус' } });
     expect(input.value).toBe('фокус');
 
-    // export JSON
-    fireEvent.click(screen.getByText('Экспорт JSON'));
+    // export Markdown
+    fireEvent.click(screen.getByText('Скачать Markdown'));
 
     // export PNG -> should fall back to anchor download
-    fireEvent.click(screen.getByRole('button', { name: 'Экспорт PNG' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Сохранить PNG' }));
+      vi.advanceTimersByTime(50);
+      await Promise.resolve();
+    });
 
     expect(click).toHaveBeenCalled();
 
@@ -182,7 +187,7 @@ describe('App', () => {
     vi.mocked(bridge.send).mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
 
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Экспорт PNG' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить PNG' }));
 
     await new Promise((r) => setTimeout(r, 80));
 
@@ -280,7 +285,7 @@ describe('App', () => {
     fireEvent.click(futureDay!);
     // Should show read-only trace, not mood selector
     expect(screen.queryByLabelText('mood-blue')).toBeNull();
-    expect(screen.getByText(/настроение: —/)).toBeInTheDocument();
+    expect(screen.getAllByText(/настроение: —/)[0]).toBeInTheDocument();
   });
 
   it('shows "Что сегодня было важным?" for today', () => {
@@ -421,7 +426,7 @@ describe('App', () => {
     expect(dayWithMood!.className).toContain('mood-blue');
   });
 
-  it('hides PNG/JSON export buttons when not on desktop_web', async () => {
+  it('shows export buttons even when not on desktop_web', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
@@ -429,8 +434,8 @@ describe('App', () => {
     vi.mocked(isDesktopWeb).mockReturnValue(false);
 
     render(<App />);
-    expect(screen.queryByText('Экспорт PNG')).toBeNull();
-    expect(screen.queryByText('Экспорт JSON')).toBeNull();
+    expect(screen.getByText('Сохранить PNG')).toBeInTheDocument();
+    expect(screen.getByText('Скачать Markdown')).toBeInTheDocument();
     expect(screen.getByText('Поделиться')).toBeInTheDocument();
 
     vi.mocked(isDesktopWeb).mockReturnValue(true);
@@ -490,5 +495,29 @@ describe('App', () => {
 
     const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
     expect(input.value).toBe('fallback');
+  });
+
+  it('writes only current year data to VK Storage writer', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    localStorage.setItem('days_of_year:v1', JSON.stringify({
+      version: 1,
+      year: 2026,
+      days: {
+        '2025-12-31': { word: 'old-year' },
+        '2026-01-01': { word: 'current-year' },
+      },
+    }));
+
+    render(<App />);
+
+    const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'updated' } });
+
+    expect(setYearMock).toHaveBeenCalledWith(expect.objectContaining({
+      '2026-01-30': { word: 'updated' },
+    }));
+    expect(setYearMock.mock.calls.at(-1)?.[0]).not.toHaveProperty('2025-12-31');
   });
 });

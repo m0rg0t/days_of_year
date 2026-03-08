@@ -125,8 +125,8 @@ describe('vkYearStorage', () => {
     vi.advanceTimersByTime(650);
     await vi.runAllTicks();
 
-    // 2 monthly writes (jan, mar) + 1 legacy clear = 3 calls
-    expect(mockSend.mock.calls.length).toBe(3);
+    // 12 month writes + 1 legacy clear
+    expect(mockSend.mock.calls.length).toBe(13);
 
     const callArgs = mockSend.mock.calls.map((c) => ({
       method: c[0],
@@ -144,6 +144,11 @@ describe('vkYearStorage', () => {
     expect(marCall).toBeDefined();
     expect(JSON.parse(marCall!.value)).toEqual({ '2026-03-15': { mood: 'great' } });
 
+    // Empty month is cleared
+    const febCall = callArgs.find((c) => c.key === 'doy:2026:02');
+    expect(febCall).toBeDefined();
+    expect(febCall!.value).toBe('');
+
     // Legacy key cleared
     const legacyClear = callArgs.find((c) => c.key === 'doy:2026');
     expect(legacyClear).toBeDefined();
@@ -159,11 +164,41 @@ describe('vkYearStorage', () => {
     vi.advanceTimersByTime(650);
     await vi.runAllTicks();
 
-    // 1 monthly write (may) + 1 legacy clear = 2 calls
-    expect(mockSend.mock.calls.length).toBe(2);
+    // 12 month writes + 1 legacy clear
+    expect(mockSend.mock.calls.length).toBe(13);
 
     const keys = mockSend.mock.calls.map((c) => (c[1] as { key: string }).key);
     expect(keys).toContain('doy:2026:05');
     expect(keys).toContain('doy:2026');
+  });
+
+  it('writer reports saving and saved states', async () => {
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+    const onStateChange = vi.fn();
+
+    const w = createVkYearBlobWriter(2026, { onStateChange });
+    w.setYear({ '2026-05-10': { word: 'hello' } });
+
+    expect(onStateChange).toHaveBeenCalledWith({ status: 'saving' });
+
+    vi.advanceTimersByTime(650);
+    await vi.runAllTicks();
+    await Promise.resolve();
+
+    expect(onStateChange.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ status: 'saved' }));
+  });
+
+  it('writer clears removed months in VK Storage', async () => {
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+
+    const w = createVkYearBlobWriter(2026);
+    w.setYear({});
+
+    vi.advanceTimersByTime(650);
+    await vi.runAllTicks();
+
+    const janCall = mockSend.mock.calls.find((call) => (call[1] as { key: string }).key === 'doy:2026:01');
+    expect(janCall).toBeDefined();
+    expect((janCall![1] as { value: string }).value).toBe('');
   });
 });

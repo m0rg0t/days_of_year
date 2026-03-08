@@ -6,6 +6,11 @@ export type DayData = {
   word?: string;
 };
 
+export type VkSyncState = {
+  status: 'idle' | 'saving' | 'saved' | 'error';
+  savedAt?: number;
+};
+
 const KEY_PREFIX = 'doy:'; // doy:YYYY (legacy) or doy:YYYY:MM (monthly)
 
 /** Legacy whole-year key: `doy:YYYY` */
@@ -78,7 +83,11 @@ function groupByMonth(days: Record<string, DayData>): Map<number, Record<string,
   return groups;
 }
 
-export function createVkYearBlobWriter(year: number) {
+type VkYearBlobWriterOptions = {
+  onStateChange?: (state: VkSyncState) => void;
+};
+
+export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOptions = {}) {
   let pending: Record<string, DayData> | null = null;
   let timer: number | null = null;
 
@@ -91,14 +100,15 @@ export function createVkYearBlobWriter(year: number) {
 
     try {
       const groups = groupByMonth(payload);
+      const monthNumbers = Array.from({ length: 12 }, (_, index) => index + 1);
 
-      // Write each month chunk in parallel
       const writes: Promise<unknown>[] = [];
-      for (const [month, monthDays] of groups) {
+      for (const month of monthNumbers) {
+        const monthDays = groups.get(month) ?? null;
         writes.push(
           bridge.send('VKWebAppStorageSet', {
             key: monthKey(year, month),
-            value: JSON.stringify(monthDays),
+            value: monthDays ? JSON.stringify(monthDays) : '',
           }),
         );
       }
@@ -112,7 +122,12 @@ export function createVkYearBlobWriter(year: number) {
       );
 
       await Promise.all(writes);
+      options.onStateChange?.({
+        status: 'saved',
+        savedAt: Date.now(),
+      });
     } catch {
+      options.onStateChange?.({ status: 'error' });
       // ignore: localStorage remains fallback
     }
   }
@@ -126,6 +141,7 @@ export function createVkYearBlobWriter(year: number) {
     setYear(days: Record<string, DayData>) {
       pending = days;
       if (timer) window.clearTimeout(timer);
+      options.onStateChange?.({ status: 'saving' });
       timer = window.setTimeout(flush, 600);
     },
   };

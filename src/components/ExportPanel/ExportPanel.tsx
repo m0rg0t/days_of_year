@@ -1,10 +1,13 @@
+import { useMemo, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import { Button, Group, Header } from '@vkontakte/vkui';
 import { downloadText } from '../../utils';
 import type { GridLayout } from '../../gridLayout';
-import type { Store } from '../../localStore';
+import type { YearStats } from '../../stats';
+import type { DayData, VkSyncState } from '../../vkYearStorage';
+import { buildYearMarkdownReport } from '../../exportReport';
 import { ExportCard } from '../ExportCard/ExportCard';
 import './ExportPanel.css';
 
@@ -13,8 +16,10 @@ interface ExportPanelProps {
   totalDays: number;
   todayIndex: number;
   gridLayout: GridLayout;
-  store: Store;
+  days: Record<string, DayData>;
   dateKeys: string[];
+  yearStats: YearStats;
+  vkSyncState: VkSyncState;
   isDesktopWeb: boolean;
 }
 
@@ -35,8 +40,44 @@ async function uploadToTelegraph(blob: Blob, filename: string): Promise<string> 
   return `https://telegra.ph${data[0].src}`;
 }
 
-export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store, dateKeys, isDesktopWeb }: ExportPanelProps) {
+function formatSyncState(syncState: VkSyncState): string {
+  if (syncState.status === 'saving') return 'VK Storage: сохраняем изменения...';
+  if (syncState.status === 'error') return 'VK Storage: не удалось записать, остаётся локальная копия.';
+  if (syncState.status === 'saved' && syncState.savedAt) {
+    const time = new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(syncState.savedAt);
+    return `VK Storage: сохранено в ${time}.`;
+  }
+  return 'VK Storage: синхронизация активна, записи дублируются по ключам года.';
+}
+
+export function ExportPanel({
+  viewYear,
+  totalDays,
+  todayIndex,
+  gridLayout,
+  days,
+  dateKeys,
+  yearStats,
+  vkSyncState,
+  isDesktopWeb,
+}: ExportPanelProps) {
+  const [isExportingPng, setIsExportingPng] = useState(false);
+  const markdownFilename = `days-of-year-${viewYear}.md`;
+  const markdownText = useMemo(() => buildYearMarkdownReport({
+    year: viewYear,
+    totalDays,
+    todayIndex,
+    days,
+    dateKeys,
+    yearStats,
+  }), [viewYear, totalDays, todayIndex, days, dateKeys, yearStats]);
+
   async function exportPng() {
+    setIsExportingPng(true);
     const host = document.createElement('div');
     host.style.position = 'fixed';
     host.style.left = '-99999px';
@@ -44,85 +85,79 @@ export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store
     document.body.appendChild(host);
 
     const root = createRoot(host);
-    root.render(
-      <ExportCard
-        year={viewYear}
-        totalDays={totalDays}
-        todayIndex={todayIndex}
-        gridLayout={gridLayout}
-        days={store.days}
-        dateKeys={dateKeys}
-      />,
-    );
+    try {
+      root.render(
+        <ExportCard
+          year={viewYear}
+          totalDays={totalDays}
+          todayIndex={todayIndex}
+          gridLayout={gridLayout}
+          days={days}
+          dateKeys={dateKeys}
+          yearStats={yearStats}
+        />,
+      );
 
-    await new Promise((r) => setTimeout(r, 30));
+      await new Promise((r) => setTimeout(r, 30));
 
-    const target = host.firstElementChild as HTMLElement | null;
-    if (!target) {
+      const target = host.firstElementChild as HTMLElement | null;
+      if (!target) return;
+
+      const canvas = await html2canvas(target, {
+        backgroundColor: '#08111e',
+        scale: 2,
+      });
+
+      const filename = `days-of-year-${viewYear}.png`;
+      const blob = await canvasToBlob(canvas);
+
+      if (!isDesktopWeb) {
+        try {
+          const url = await uploadToTelegraph(blob, filename);
+          await bridge.send('VKWebAppDownloadFile', { url, filename });
+          return;
+        } catch {
+          // Not on supported mobile VK platform or upload failed.
+        }
+      }
+
+      try {
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      } catch {
+        // User cancelled or API unavailable.
+      }
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } finally {
       root.unmount();
       host.remove();
-      return;
+      setIsExportingPng(false);
     }
-
-    const canvas = await html2canvas(target, {
-      backgroundColor: '#0f0f10',
-      scale: 2,
-    });
-
-    root.unmount();
-    host.remove();
-
-    const filename = `days-of-year-${viewYear}.png`;
-    const blob = await canvasToBlob(canvas);
-
-    // 1. Try native share sheet (mobile browsers)
-    try {
-      const file = new File([blob], filename, { type: 'image/png' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] });
-        return;
-      }
-    } catch {
-      // User cancelled or API unavailable — fall through
-    }
-
-    // 2. Try VK Bridge download (upload to Telegraph → VKWebAppDownloadFile)
-    try {
-      const url = await uploadToTelegraph(blob, filename);
-      await bridge.send('VKWebAppDownloadFile', { url, filename });
-      return;
-    } catch {
-      // Not on VK mobile or upload failed — fall through
-    }
-
-    // 3. Fallback: anchor download (web)
-    const dataUrl = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
 
-  async function exportJson() {
-    const filename = `days-of-year-${viewYear}.json`;
-    const text = JSON.stringify(store, null, 2);
-
-    // 1. Try native share sheet (mobile)
+  async function exportMarkdown() {
     try {
-      const blob = new Blob([text], { type: 'application/json' });
-      const file = new File([blob], filename, { type: 'application/json' });
+      const blob = new Blob([markdownText], { type: 'text/markdown;charset=utf-8' });
+      const file = new File([blob], markdownFilename, { type: 'text/markdown' });
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
         return;
       }
     } catch {
-      // User cancelled or API unavailable — fall through
+      // User cancelled or API unavailable.
     }
 
-    // 2. Fallback: anchor download
-    downloadText(filename, text);
+    downloadText(markdownFilename, markdownText, 'text/markdown;charset=utf-8');
   }
 
   async function shareVk() {
@@ -136,22 +171,25 @@ export function ExportPanel({ viewYear, totalDays, todayIndex, gridLayout, store
   return (
     <Group header={<Header>Экспорт</Header>}>
       <div className="vkui-div export-panel__row">
-        {isDesktopWeb && (
-          <Button size="m" mode="primary" onClick={exportPng}>
-            Экспорт PNG
-          </Button>
-        )}
-        {isDesktopWeb && (
-          <Button size="m" mode="secondary" onClick={exportJson}>
-            Экспорт JSON
-          </Button>
-        )}
+        <Button size="m" mode="primary" onClick={exportPng} loading={isExportingPng} disabled={isExportingPng}>
+          Сохранить PNG
+        </Button>
+        <Button size="m" mode="secondary" onClick={exportMarkdown}>
+          Скачать Markdown
+        </Button>
         <Button size="m" mode="secondary" onClick={shareVk}>
           Поделиться
         </Button>
       </div>
       <div className="vkui-div small">
-        Данные хранятся локально (localStorage) и в VK Storage (ключ на год).
+        {formatSyncState(vkSyncState)}
+      </div>
+      <div className="vkui-div small">
+        Локальная копия хранится в `localStorage`. На мобильных внутри VK PNG уходит через временную загрузку файла и `VKWebAppDownloadFile`.
+      </div>
+      <div className="vkui-div export-panel__markdown">
+        <div className="export-panel__markdown-head">{markdownFilename}</div>
+        <pre className="export-panel__markdown-body">{markdownText}</pre>
       </div>
     </Group>
   );

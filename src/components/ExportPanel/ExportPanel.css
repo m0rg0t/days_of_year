@@ -2,10 +2,39 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 10px;
 }
 
 .export-panel__row .vkuiButton {
   flex: 1 1 calc(33% - 6px);
+}
+
+.export-panel__markdown {
+  margin-top: 14px;
+  border: 1px solid rgba(92, 102, 118, 0.22);
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(246, 248, 251, 0.92), rgba(238, 242, 247, 0.94));
+}
+
+.export-panel__markdown-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(92, 102, 118, 0.16);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 600;
+  color: #546277;
+}
+
+.export-panel__markdown-body {
+  margin: 0;
+  padding: 16px 14px;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 12px/1.55 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+  color: #1f2833;
 }
 
 @media (max-width: 420px) {
