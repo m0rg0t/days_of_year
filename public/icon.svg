@@ -1,0 +1,32 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="14" fill="#0E1626"/>
+  <rect width="64" height="64" rx="14" fill="url(#g)" fill-opacity="0.5"/>
+  <g>
+    <!-- past days: filled -->
+    <circle cx="14" cy="16" r="3.4" fill="#9AA3AE"/>
+    <circle cx="25" cy="16" r="3.4" fill="#9AA3AE"/>
+    <circle cx="36" cy="16" r="3.4" fill="#9AA3AE"/>
+    <circle cx="14" cy="27" r="3.4" fill="#9AA3AE"/>
+    <circle cx="25" cy="27" r="3.4" fill="#26C470"/>
+    <circle cx="36" cy="27" r="3.4" fill="#9AA3AE"/>
+    <circle cx="14" cy="38" r="3.4" fill="#F0B81E"/>
+    <circle cx="25" cy="38" r="3.4" fill="#9AA3AE"/>
+    <!-- today: accent -->
+    <circle cx="36" cy="38" r="4" fill="#3884FF"/>
+    <circle cx="36" cy="38" r="6.5" stroke="#3884FF" stroke-opacity="0.4" stroke-width="2"/>
+    <!-- future: empty rings -->
+    <circle cx="47" cy="16" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+    <circle cx="47" cy="27" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+    <circle cx="47" cy="38" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+    <circle cx="14" cy="49" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+    <circle cx="25" cy="49" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+    <circle cx="36" cy="49" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+    <circle cx="47" cy="49" r="3.4" stroke="#3A4254" stroke-width="1.4"/>
+  </g>
+  <defs>
+    <radialGradient id="g" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(8 8) rotate(45) scale(64)">
+      <stop stop-color="#3884FF" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#3884FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
