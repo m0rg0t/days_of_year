@@ -39,18 +39,27 @@ describe('ErrorBoundary', () => {
   it('reloads the page when the button is clicked', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const reload = vi.fn();
+    const originalLocation = window.location;
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...window.location, reload },
     });
 
-    render(
-      <ErrorBoundary>
-        <Boom />
-      </ErrorBoundary>,
-    );
+    try {
+      render(
+        <ErrorBoundary>
+          <Boom />
+        </ErrorBoundary>,
+      );
 
-    fireEvent.click(screen.getByText('Обновить'));
-    expect(reload).toHaveBeenCalled();
+      fireEvent.click(screen.getByText('Обновить'));
+      expect(reload).toHaveBeenCalled();
+    } finally {
+      // Restore the real location so we don't leak a frozen fake into later tests.
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
   });
 });

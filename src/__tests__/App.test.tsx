@@ -199,6 +199,34 @@ describe('App', () => {
     expect(vi.mocked(html2canvas).mock.calls.length).toBeGreaterThan(0);
   }, 10000);
 
+  it('cancelling the native share does NOT fall through to a third-party upload', async () => {
+    vi.mocked(bridge.send).mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+    const { isDesktopWeb } = await import('../vkPlatform');
+    vi.mocked(isDesktopWeb).mockReturnValue(false); // mobile: telegra.ph would otherwise be the fallback
+
+    const shareMock = vi.fn().mockRejectedValue(Object.assign(new Error('cancel'), { name: 'AbortError' }));
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: shareMock });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('[{"src":"/x.png"}]'));
+
+    try {
+      render(<App />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Сохранить PNG' }));
+        await new Promise((r) => setTimeout(r, 80));
+      });
+
+      expect(shareMock).toHaveBeenCalled();
+      // A user cancel must end the flow — no telegra.ph upload, no VKWebAppDownloadFile.
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(vi.mocked(bridge.send).mock.calls.some((c) => c[0] === 'VKWebAppDownloadFile')).toBe(false);
+    } finally {
+      delete (navigator as { canShare?: unknown }).canShare;
+      delete (navigator as { share?: unknown }).share;
+      vi.mocked(isDesktopWeb).mockReturnValue(true);
+    }
+  }, 10000);
+
   it('applies VK dark scheme from VKWebAppGetConfig', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
@@ -517,9 +545,12 @@ describe('App', () => {
     });
 
     expect(vi.mocked(createStoryImageDataUrl)).toHaveBeenCalled();
-    expect(
-      vi.mocked(bridge.send).mock.calls.some((c) => c[0] === 'VKWebAppShowStoryBox'),
-    ).toBe(true);
+    const storyCall = vi.mocked(bridge.send).mock.calls.find((c) => c[0] === 'VKWebAppShowStoryBox');
+    expect(storyCall).toBeDefined();
+    // Lock the blob payload format (the mock returns a full data: URL).
+    const params = storyCall![1] as { background_type: string; blob: string };
+    expect(params.background_type).toBe('image');
+    expect(params.blob).toBe('data:image/png;base64,STORY');
   });
 
   it('skips story share when no image data is produced', async () => {

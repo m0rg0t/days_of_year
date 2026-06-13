@@ -109,13 +109,13 @@ export default function App() {
 
       if (!dataUrl) return;
 
-      // VKWebAppShowStoryBox `blob` expects a raw Base64 string ("Base64 string
-      // with BLOB" per ShowStoryBoxOptions), NOT a data: URL — strip the prefix.
-      const blob = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-
+      // Pass the full `data:image/png;base64,...` URL as `blob` — this is the
+      // form VK's ShowStoryBox examples and the previously-shipped build use.
+      // (The type comment "Base64 string with BLOB" is ambiguous; confirm the
+      // accepted form on a real VK client before changing this.)
       await bridge.send('VKWebAppShowStoryBox', {
         background_type: 'image',
-        blob,
+        blob: dataUrl,
         attachment: {
           type: 'url',
           url: window.location.href,

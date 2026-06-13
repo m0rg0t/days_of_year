@@ -132,13 +132,16 @@ export function ExportPanel({
           await navigator.share({ files: [file] });
           return;
         }
-      } catch {
-        // User cancelled or API unavailable.
+      } catch (err) {
+        // A deliberate user cancel (AbortError) must END the flow — never fall
+        // through to the third-party upload below. Only a genuine "share
+        // unavailable" failure continues to the fallback paths.
+        if (err instanceof Error && err.name === 'AbortError') return;
       }
 
       // 2) Mobile-VK fallback only: VKWebAppDownloadFile needs a public URL, so
-      //    the PNG is uploaded to telegra.ph. Reached solely when local sharing
-      //    is unavailable (privacy note: this sends user data to a third party).
+      //    the PNG is uploaded to telegra.ph. Reached only when local sharing is
+      //    unavailable (privacy note: this sends user data to a third party).
       if (!isDesktopWeb) {
         try {
           const url = await uploadToTelegraph(blob, filename);
@@ -149,14 +152,15 @@ export function ExportPanel({
         }
       }
 
-      // 3) Last resort: direct local download.
-      const dataUrl = canvas.toDataURL('image/png');
+      // 3) Last resort: direct local download — reuse the blob, no re-encode.
+      const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = dataUrl;
+      a.href = objectUrl;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
+      URL.revokeObjectURL(objectUrl);
     } finally {
       root?.unmount();
       host.remove();
@@ -204,7 +208,7 @@ export function ExportPanel({
         {formatSyncState(vkSyncState)}
       </div>
       <div className="vkui-div small">
-        Локальная копия хранится в `localStorage`. На мобильных внутри VK PNG уходит через временную загрузку файла и `VKWebAppDownloadFile`.
+        Локальная копия хранится в `localStorage`. PNG сначала сохраняется прямо на устройство; если это недоступно — на мобильных внутри VK файл выгружается через `VKWebAppDownloadFile`.
       </div>
       <div className="vkui-div export-panel__markdown">
         <div className="export-panel__markdown-head">{markdownFilename}</div>
