@@ -13,6 +13,10 @@ type MonthQuickJump = {
   monthIndex: number;
 };
 
+// Stable identity for empty days so `selectedData` doesn't change reference
+// every render (which would defeat memoization on consumers like DayDetail).
+const EMPTY_DAY: DayData = {};
+
 type UseYearViewResult = {
   currentYear: number;
   realTodayIndex: number;
@@ -67,7 +71,7 @@ export function useYearView(): UseYearViewResult {
   const yearStats = useMemo(() => computeYearStats(yearDays, viewYear, todayIndex), [yearDays, viewYear, todayIndex]);
   const badges = useMemo(() => getEarnedBadges(yearStats), [yearStats]);
   const selectedKey = dateKeyForDayIndex(viewYear, selectedDayIndex);
-  const selectedData = yearDays[selectedKey] || {};
+  const selectedData = useMemo(() => yearDays[selectedKey] ?? EMPTY_DAY, [yearDays, selectedKey]);
   const isSelectedPastOrToday = todayIndex > 0 && selectedDayIndex <= todayIndex;
   const isSelectedEditable = viewYear < currentYear || isSelectedPastOrToday;
   const isToday = viewYear === currentYear && selectedDayIndex === todayIndex;

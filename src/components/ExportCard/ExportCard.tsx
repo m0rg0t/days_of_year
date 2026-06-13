@@ -3,6 +3,7 @@ import type { YearStats } from '../../stats';
 import { MOOD_LABELS } from '../../utils';
 import type { DayData } from '../../vkYearStorage';
 import { moodClass } from '../../utils';
+import { gridCSSVars } from '../../gridLayout';
 import type { GridLayout } from '../../gridLayout';
 import { collectFilledEntries } from '../../exportReport';
 
@@ -69,15 +70,12 @@ export function ExportCard(props: {
         <div className="export-card__grid-shell">
           <div
             className="export-card__grid"
-            style={{
-              '--cols': gridLayout.cols,
-              '--cell': `${gridLayout.cell}px`,
-              '--gap': `${gridLayout.gap}px`,
-            } as React.CSSProperties}
+            style={gridCSSVars(gridLayout)}
           >
             {dateKeys.map((key, i) => {
               const dayIndex = i + 1;
-              const filled = dayIndex < todayIndex;
+              // todayIndex === 0 means an archived (fully past) year — every day is lived.
+              const filled = todayIndex === 0 || dayIndex < todayIndex;
               const isToday = dayIndex === todayIndex;
               const data = days[key];
               const mood = moodClass(data?.mood);

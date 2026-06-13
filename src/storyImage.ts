@@ -53,7 +53,7 @@ export function createStoryImageDataUrl({
 
   ctx.fillStyle = '#6d7885';
   ctx.font = '400 22px "Segoe UI", "SF Pro Text", -apple-system, Arial, sans-serif';
-  ctx.fillText('«Этот день — один из твоих 365.»', padding, 148);
+  ctx.fillText(`«Этот день — один из твоих ${dateKeys.length}.»`, padding, 148);
 
   const cols = 20;
   const cell = 18;
@@ -69,7 +69,8 @@ export function createStoryImageDataUrl({
     const centerX = gridX + col * (cell + gap) + cell / 2;
     const centerY = gridY + row * (cell + gap) + cell / 2;
     const mood = days[dateKeys[i]]?.mood;
-    const filled = todayIndex > 0 && dayIndex < todayIndex;
+    // todayIndex === 0 means an archived (fully past) year — every day is lived.
+    const filled = todayIndex === 0 || dayIndex < todayIndex;
     const isToday = todayIndex > 0 && dayIndex === todayIndex;
 
     const palette = mood ? MOOD_COLORS[mood] : null;

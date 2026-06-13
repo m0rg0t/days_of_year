@@ -1,8 +1,8 @@
 .year-nav {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: center;
+  gap: 20px;
 }
 
 .year-nav__label {
@@ -19,11 +19,7 @@
   height: 44px;
   border-radius: 999px;
   border: 1px solid var(--vkui--color_separator_primary_alpha);
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.07),
-    rgba(255, 255, 255, 0.02)
-  );
+  background: var(--vkui--color_background_secondary_alpha);
   color: var(--vkui--color_text_primary);
   font-size: 20px;
   font-weight: 600;
@@ -49,13 +45,14 @@
 }
 
 .year-nav__button:disabled {
-  opacity: 0.28;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .year-nav__meta {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
   padding: 2px 16px 8px;
 }
@@ -69,7 +66,7 @@
   font-size: 13px;
   color: var(--vkui--color_text_secondary);
   border: 1px solid var(--vkui--color_separator_primary_alpha);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--vkui--color_background_secondary_alpha);
 }
 
 .year-nav__progress {
@@ -89,8 +86,7 @@
 }
 
 @media (min-width: 600px) {
-  .year-nav {
-    max-width: 420px;
-    margin: 0 auto;
+  .year-nav__meta {
+    padding-top: 4px;
   }
 }

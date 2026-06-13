@@ -11,19 +11,19 @@
 
 .export-panel__markdown {
   margin-top: 14px;
-  border: 1px solid rgba(92, 102, 118, 0.22);
-  border-radius: 20px;
+  border: 1px solid var(--vkui--color_separator_primary_alpha);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(246, 248, 251, 0.92), rgba(238, 242, 247, 0.94));
+  background: var(--vkui--color_background_secondary);
 }
 
 .export-panel__markdown-head {
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(92, 102, 118, 0.16);
-  background: rgba(255, 255, 255, 0.75);
+  border-bottom: 1px solid var(--vkui--color_separator_primary_alpha);
+  background: var(--vkui--color_background_secondary_alpha);
   font-size: 13px;
   font-weight: 600;
-  color: #546277;
+  color: var(--vkui--color_text_secondary);
 }
 
 .export-panel__markdown-body {
@@ -34,7 +34,13 @@
   white-space: pre-wrap;
   word-break: break-word;
   font: 12px/1.55 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', monospace;
-  color: #1f2833;
+  color: var(--vkui--color_text_primary);
+}
+
+@media (max-width: 600px) {
+  .export-panel__markdown-body {
+    max-height: 200px;
+  }
 }
 
 @media (max-width: 420px) {

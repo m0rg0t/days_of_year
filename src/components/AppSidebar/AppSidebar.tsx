@@ -3,7 +3,6 @@ import { Group, Header } from '@vkontakte/vkui';
 import { DayDetail } from '../DayDetail/DayDetail';
 import { ExportPanel } from '../ExportPanel/ExportPanel';
 import { StatsPanel } from '../StatsPanel/StatsPanel';
-import type { GridLayout } from '../../gridLayout';
 import type { Badge } from '../../badges';
 import type { YearStats } from '../../stats';
 import type { DayData, VkSyncState } from '../../vkYearStorage';
@@ -21,7 +20,6 @@ interface AppSidebarProps {
   badges: Badge[];
   viewYear: number;
   todayIndex: number;
-  gridLayout: GridLayout;
   days: Record<string, DayData>;
   dateKeys: string[];
   vkSyncState: VkSyncState;
@@ -41,7 +39,6 @@ export function AppSidebar({
   badges,
   viewYear,
   todayIndex,
-  gridLayout,
   days,
   dateKeys,
   vkSyncState,
@@ -71,7 +68,6 @@ export function AppSidebar({
         viewYear={viewYear}
         totalDays={totalDays}
         todayIndex={todayIndex}
-        gridLayout={gridLayout}
         days={days}
         dateKeys={dateKeys}
         yearStats={yearStats}

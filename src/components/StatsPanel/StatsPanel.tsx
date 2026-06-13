@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { YearStats } from '../../stats';
 import type { Badge } from '../../badges';
-import { MOODS } from '../../utils';
+import { MOOD_LABELS, MOODS } from '../../utils';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
@@ -24,7 +24,8 @@ export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
         <button
           className="stats-panel__toggle"
           onClick={() => setShowStats((s) => !s)}
-          aria-label="toggle-stats"
+          aria-expanded={showStats}
+          data-testid="stats-toggle"
         >
           {showStats ? 'Скрыть статистику' : 'Показать статистику'}
         </button>
@@ -51,26 +52,41 @@ export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
             {yearStats.mostCommonMood && (
               <div className="stats-panel__row">
                 <span>Частое настроение</span>
-                <span className={`stats-panel__mood-dot stats-panel__mood-dot--${yearStats.mostCommonMood}`} />
+                <span className="stats-panel__mood-value">
+                  <span
+                    className={`stats-panel__mood-dot stats-panel__mood-dot--${yearStats.mostCommonMood}`}
+                    aria-hidden
+                  />
+                  <span>{MOOD_LABELS[yearStats.mostCommonMood]}</span>
+                </span>
               </div>
             )}
-            {yearStats.filledDays > 0 && (
-              <div className="stats-panel__mood-distribution">
-                {MOODS.map((mood) => {
-                  const pct = yearStats.filledDays > 0
-                    ? Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100)
-                    : 0;
-                  return pct > 0 ? (
+            {yearStats.filledDays > 0 && (() => {
+              // Compute each mood's share once; reuse for the label and the bar.
+              const moodPercents = MOODS.map((mood) => ({
+                mood,
+                pct: Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100),
+              })).filter((m) => m.pct > 0);
+
+              return (
+                <div
+                  className="stats-panel__mood-distribution"
+                  role="img"
+                  aria-label={`Распределение настроений: ${moodPercents
+                    .map((m) => `${MOOD_LABELS[m.mood]} ${m.pct}%`)
+                    .join(', ')}`}
+                >
+                  {moodPercents.map((m) => (
                     <div
-                      key={mood}
-                      className={`stats-panel__mood-segment stats-panel__mood-segment--${mood}`}
-                      style={{ width: `${pct}%` }}
-                      title={`${mood}: ${pct}%`}
+                      key={m.mood}
+                      className={`stats-panel__mood-segment stats-panel__mood-segment--${m.mood}`}
+                      style={{ width: `${m.pct}%` }}
+                      title={`${MOOD_LABELS[m.mood]}: ${m.pct}%`}
                     />
-                  ) : null;
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           <div className="stats-panel__badges" data-testid="badges-row">
             {badges.map((badge) => {

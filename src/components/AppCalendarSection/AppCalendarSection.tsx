@@ -2,7 +2,8 @@ import type { RefObject } from 'react';
 import { Button, Group, Header } from '@vkontakte/vkui';
 
 import { DayGrid } from '../DayGrid/DayGrid';
-import type { GridLayout } from '../../gridLayout';
+import { MOODS, MOOD_LABELS } from '../../utils';
+import type { GridDensity, GridLayout } from '../../gridLayout';
 import type { DayData } from '../../vkYearStorage';
 
 type MonthQuickJump = {
@@ -25,13 +26,13 @@ interface AppCalendarSectionProps {
   gridLayout: GridLayout;
   gridRef: RefObject<HTMLDivElement | null>;
   gridHint: string;
-  gridDensity: 'comfortable' | 'compact';
+  gridDensity: GridDensity;
   monthQuickJumps: MonthQuickJump[];
   isDesktop: boolean;
   canGoPrevDay: boolean;
   canGoNextDay: boolean;
   onGoToToday: () => void;
-  onSetGridDensity: (density: 'comfortable' | 'compact') => void;
+  onSetGridDensity: (density: GridDensity) => void;
   onSelectDay: (dayIndex: number) => void;
   onJumpToMonthStart: (dayIndex: number) => void;
   onGoPrevDay: () => void;
@@ -109,6 +110,23 @@ export function AppCalendarSection({
           onSelectDay={onSelectDay}
         />
 
+        <div className="vkui-div day-legend">
+          <span className="day-legend__item">
+            <span className="day-legend__dot day-legend__dot--filled" aria-hidden />
+            Прошедшие
+          </span>
+          <span className="day-legend__item">
+            <span className="day-legend__dot day-legend__dot--today" aria-hidden />
+            Сегодня
+          </span>
+          {MOODS.map((mood) => (
+            <span className="day-legend__item" key={mood}>
+              <span className={`day-legend__dot day-legend__dot--${mood}`} aria-hidden />
+              {MOOD_LABELS[mood]}
+            </span>
+          ))}
+        </div>
+
         {!isDesktop && (
           <div className="vkui-div mobile-month-nav">
             <div className="mobile-month-nav__list" role="list">
@@ -117,7 +135,9 @@ export function AppCalendarSection({
                   key={month.label}
                   className={`mobile-month-nav__chip ${month.monthIndex === selectedMonthIndex ? 'mobile-month-nav__chip--active' : ''}`}
                   onClick={() => onJumpToMonthStart(month.dayIndex)}
-                  aria-label={`jump-month-${month.monthIndex + 1}`}
+                  aria-label={`Перейти к месяцу: ${month.label}`}
+                  aria-current={month.monthIndex === selectedMonthIndex ? 'true' : undefined}
+                  data-testid={`jump-month-${month.monthIndex + 1}`}
                 >
                   {month.label}
                 </button>
@@ -134,10 +154,10 @@ export function AppCalendarSection({
                 mode="secondary"
                 className="mobile-day-shortcut__arrow"
                 disabled={!canGoPrevDay}
-                aria-label="previous-day"
+                aria-label="Предыдущий день"
                 onClick={onGoPrevDay}
               >
-                ←
+                <span aria-hidden>←</span>
               </Button>
               <Button
                 size="m"
@@ -152,10 +172,10 @@ export function AppCalendarSection({
                 mode="secondary"
                 className="mobile-day-shortcut__arrow"
                 disabled={!canGoNextDay}
-                aria-label="next-day"
+                aria-label="Следующий день"
                 onClick={onGoNextDay}
               >
-                →
+                <span aria-hidden>→</span>
               </Button>
             </div>
             <div className="mobile-day-shortcut__meta small">

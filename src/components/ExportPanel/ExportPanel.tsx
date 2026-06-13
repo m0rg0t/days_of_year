@@ -1,21 +1,28 @@
 import { useMemo, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Button, Group, Header } from '@vkontakte/vkui';
 import { downloadText } from '../../utils';
-import type { GridLayout } from '../../gridLayout';
+import { computeBestLayout } from '../../gridLayout';
 import type { YearStats } from '../../stats';
 import type { DayData, VkSyncState } from '../../vkYearStorage';
 import { buildYearMarkdownReport } from '../../exportReport';
 import { ExportCard } from '../ExportCard/ExportCard';
 import './ExportPanel.css';
 
+/**
+ * The export card is a fixed shareable artifact, so its dot grid is computed
+ * once from a stable target width (clamped to the comfortable 420px cap),
+ * independent of the on-screen responsive grid and the user's density choice.
+ */
+const EXPORT_LAYOUT = computeBestLayout({ width: 440 });
+
 interface ExportPanelProps {
   viewYear: number;
   totalDays: number;
   todayIndex: number;
-  gridLayout: GridLayout;
   days: Record<string, DayData>;
   dateKeys: string[];
   yearStats: YearStats;
@@ -58,7 +65,6 @@ export function ExportPanel({
   viewYear,
   totalDays,
   todayIndex,
-  gridLayout,
   days,
   dateKeys,
   yearStats,
@@ -82,23 +88,30 @@ export function ExportPanel({
     host.style.position = 'fixed';
     host.style.left = '-99999px';
     host.style.top = '0';
-    document.body.appendChild(host);
 
-    const root = createRoot(host);
+    let root: ReturnType<typeof createRoot> | null = null;
     try {
-      root.render(
-        <ExportCard
-          year={viewYear}
-          totalDays={totalDays}
-          todayIndex={todayIndex}
-          gridLayout={gridLayout}
-          days={days}
-          dateKeys={dateKeys}
-          yearStats={yearStats}
-        />,
-      );
+      document.body.appendChild(host);
+      root = createRoot(host);
+      // flushSync forces React to commit the card synchronously, so the node is
+      // guaranteed mounted before html2canvas reads it (a bare setTimeout raced
+      // React 19's deferred commit and could capture an empty host).
+      flushSync(() => {
+        root!.render(
+          <ExportCard
+            year={viewYear}
+            totalDays={totalDays}
+            todayIndex={todayIndex}
+            gridLayout={EXPORT_LAYOUT}
+            days={days}
+            dateKeys={dateKeys}
+            yearStats={yearStats}
+          />,
+        );
+      });
 
-      await new Promise((r) => setTimeout(r, 30));
+      // Let fonts settle (where supported) before rasterizing.
+      await document.fonts?.ready?.catch?.(() => {});
 
       const target = host.firstElementChild as HTMLElement | null;
       if (!target) return;
@@ -139,7 +152,7 @@ export function ExportPanel({
       a.click();
       a.remove();
     } finally {
-      root.unmount();
+      root?.unmount();
       host.remove();
       setIsExportingPng(false);
     }
