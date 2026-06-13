@@ -124,16 +124,8 @@ export function ExportPanel({
       const filename = `days-of-year-${viewYear}.png`;
       const blob = await canvasToBlob(canvas);
 
-      if (!isDesktopWeb) {
-        try {
-          const url = await uploadToTelegraph(blob, filename);
-          await bridge.send('VKWebAppDownloadFile', { url, filename });
-          return;
-        } catch {
-          // Not on supported mobile VK platform or upload failed.
-        }
-      }
-
+      // 1) Local Web Share first — keeps the image (with the user's notes) on
+      //    device, no third-party upload. Preferred for privacy.
       try {
         const file = new File([blob], filename, { type: 'image/png' });
         if (navigator.canShare?.({ files: [file] })) {
@@ -144,6 +136,20 @@ export function ExportPanel({
         // User cancelled or API unavailable.
       }
 
+      // 2) Mobile-VK fallback only: VKWebAppDownloadFile needs a public URL, so
+      //    the PNG is uploaded to telegra.ph. Reached solely when local sharing
+      //    is unavailable (privacy note: this sends user data to a third party).
+      if (!isDesktopWeb) {
+        try {
+          const url = await uploadToTelegraph(blob, filename);
+          await bridge.send('VKWebAppDownloadFile', { url, filename });
+          return;
+        } catch {
+          // Not on supported mobile VK platform or upload failed.
+        }
+      }
+
+      // 3) Last resort: direct local download.
       const dataUrl = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = dataUrl;
