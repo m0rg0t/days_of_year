@@ -38,8 +38,13 @@ export default function App() {
   const [gridDensity, setGridDensity] = useState(() => loadGridDensity());
   const [isSharingStory, setIsSharingStory] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const { gridRef, gridLayout } = useGridLayout(gridDensity);
   const isDesktop = useIsDesktop();
+  // On roomy desktop columns, let the grid grow wider but keep dots capped so
+  // it reads as a dense, centered block instead of leaving a void to the right.
+  const { gridRef, gridLayout } = useGridLayout(
+    gridDensity,
+    isDesktop ? { maxWidth: 620, maxCell: 18 } : undefined,
+  );
   const showDesktopExports = useMemo(() => checkDesktopWeb(), []);
   const {
     currentYear,
@@ -113,8 +118,8 @@ export default function App() {
           text: 'open',
         },
       });
-    } catch (error) {
-      console.error('Failed to share story', error);
+    } catch {
+      // User cancelled, or VK Bridge / StoryBox is unavailable — graceful no-op.
     } finally {
       setIsSharingStory(false);
     }
@@ -147,17 +152,6 @@ export default function App() {
                   <PanelHeader>Дни года</PanelHeader>
 
                   <Group className="app-hero" header={<Header>«Этот день — один из твоих 365.»</Header>}>
-                    <div className="vkui-div story-share">
-                      <Button
-                        size="m"
-                        mode="primary"
-                        onClick={shareToStory}
-                        loading={isSharingStory}
-                        disabled={isSharingStory}
-                      >
-                        Поделиться в историю
-                      </Button>
-                    </div>
                     <YearNav
                       viewYear={viewYear}
                       currentYear={currentYear}
@@ -165,6 +159,18 @@ export default function App() {
                       totalDays={totalDays}
                       onChangeYear={changeYear}
                     />
+                    <div className="vkui-div story-share">
+                      <Button
+                        size="m"
+                        mode="secondary"
+                        onClick={shareToStory}
+                        loading={isSharingStory}
+                        disabled={isSharingStory}
+                        before={<span aria-hidden>✦</span>}
+                      >
+                        Поделиться в историю
+                      </Button>
+                    </div>
                   </Group>
 
                   <div className="app-layout">
@@ -209,7 +215,6 @@ export default function App() {
                       badges={badges}
                       viewYear={viewYear}
                       todayIndex={todayIndex}
-                      gridLayout={gridLayout}
                       days={yearDays}
                       dateKeys={dateKeys}
                       vkSyncState={vkSyncState}

@@ -1,7 +1,7 @@
 .stats-panel__toggle {
   width: 100%;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--vkui--color_separator_primary_alpha);
   background: var(--vkui--color_background_secondary_alpha);
   color: var(--vkui--color_text_primary);
@@ -11,7 +11,7 @@
 }
 
 .stats-panel__toggle:hover {
-  border-color: var(--accent-border, rgba(67, 123, 255, 0.35));
+  border-color: var(--accent-border);
 }
 
 .stats-panel__content {
@@ -19,10 +19,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--vkui--color_background_secondary_alpha);
-  border: 1px solid var(--accent-border, rgba(67, 123, 255, 0.18));
-  backdrop-filter: blur(8px);
+  border: 1px solid var(--accent-border);
 }
 
 .stats-panel__row {
@@ -34,6 +33,13 @@
 
 .stats-panel__row span:first-child {
   color: var(--vkui--color_text_secondary);
+}
+
+.stats-panel__mood-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 
 .stats-panel__mood-distribution {
@@ -49,10 +55,10 @@
   transition: width 0.4s ease;
 }
 
-.stats-panel__mood-segment--blue   { background: var(--mood-blue-bright, rgba(59, 130, 246, 0.85)); }
-.stats-panel__mood-segment--green  { background: var(--mood-green-bright, rgba(34, 197, 94, 0.85)); }
-.stats-panel__mood-segment--red    { background: var(--mood-red-bright, rgba(239, 68, 68, 0.85)); }
-.stats-panel__mood-segment--yellow { background: var(--mood-yellow-bright, rgba(234, 179, 8, 0.85)); }
+.stats-panel__mood-segment--blue   { background: var(--mood-blue-bright); }
+.stats-panel__mood-segment--green  { background: var(--mood-green-bright); }
+.stats-panel__mood-segment--red    { background: var(--mood-red-bright); }
+.stats-panel__mood-segment--yellow { background: var(--mood-yellow-bright); }
 
 /* ── Badges ──────────────────────────────── */
 
@@ -69,7 +75,7 @@
   align-items: center;
   gap: 4px;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--vkui--color_separator_primary_alpha);
   background: var(--vkui--color_background_secondary_alpha);
   min-width: 64px;
@@ -77,13 +83,14 @@
 }
 
 .stats-panel__badge--earned {
-  border-color: var(--accent-border, rgba(67, 123, 255, 0.32));
-  box-shadow: 0 0 9px rgba(49, 205, 255, 0.14);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 9px var(--accent-glow);
 }
 
+/* Locked: dim + desaturate, but keep enough contrast to read the label. */
 .stats-panel__badge--locked {
-  opacity: 0.35;
-  filter: grayscale(1);
+  opacity: 0.5;
+  filter: grayscale(0.8);
 }
 
 .stats-panel__badge-emoji {
@@ -92,16 +99,15 @@
 }
 
 .stats-panel__badge-title {
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
   color: var(--vkui--color_text_secondary);
   line-height: 1.2;
 }
 
 .stats-panel__badge-progress {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--vkui--color_text_secondary);
-  opacity: 0.8;
   line-height: 1;
 }
 
@@ -111,10 +117,10 @@
   border-radius: 999px;
 }
 
-.stats-panel__mood-dot--blue   { background: var(--mood-blue-bright, rgba(59, 130, 246, 0.85)); box-shadow: 0 0 6px var(--mood-blue-glow, rgba(59,130,246,0.4)); }
-.stats-panel__mood-dot--green  { background: var(--mood-green-bright, rgba(34, 197, 94, 0.85)); box-shadow: 0 0 6px var(--mood-green-glow, rgba(34,197,94,0.4)); }
-.stats-panel__mood-dot--red    { background: var(--mood-red-bright, rgba(239, 68, 68, 0.85)); box-shadow: 0 0 6px var(--mood-red-glow, rgba(239,68,68,0.4)); }
-.stats-panel__mood-dot--yellow { background: var(--mood-yellow-bright, rgba(234, 179, 8, 0.85)); box-shadow: 0 0 6px var(--mood-yellow-glow, rgba(234,179,8,0.4)); }
+.stats-panel__mood-dot--blue   { background: var(--mood-blue-bright); box-shadow: 0 0 6px var(--mood-blue-glow); }
+.stats-panel__mood-dot--green  { background: var(--mood-green-bright); box-shadow: 0 0 6px var(--mood-green-glow); }
+.stats-panel__mood-dot--red    { background: var(--mood-red-bright); box-shadow: 0 0 6px var(--mood-red-glow); }
+.stats-panel__mood-dot--yellow { background: var(--mood-yellow-bright); box-shadow: 0 0 6px var(--mood-yellow-glow); }
 
 @media (max-width: 420px) {
   .stats-panel__badges {

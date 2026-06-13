@@ -42,9 +42,20 @@ export function useVkTheme() {
   }, []);
 
   useEffect(() => {
+    // Mirror the active scheme onto <body> so the area around AppRoot
+    // (overscroll, safe-area insets) matches the app. VKUI color tokens are
+    // scoped to AppRoot, so they can't drive <body> directly; restore the
+    // previous inline style on cleanup instead of leaking it past unmount.
     const isDark = colorScheme === 'dark';
+    const prevBackground = document.body.style.background;
+    const prevColor = document.body.style.color;
     document.body.style.background = isDark ? '#0a0a0a' : '#ebedf0';
     document.body.style.color = isDark ? '#f5f5f7' : '#1a1a1e';
+
+    return () => {
+      document.body.style.background = prevBackground;
+      document.body.style.color = prevColor;
+    };
   }, [colorScheme]);
 
   return colorScheme;

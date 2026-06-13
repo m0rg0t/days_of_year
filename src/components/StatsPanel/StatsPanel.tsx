@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { YearStats } from '../../stats';
 import type { Badge } from '../../badges';
-import { MOODS } from '../../utils';
+import { MOOD_LABELS, MOODS } from '../../utils';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
@@ -24,7 +24,8 @@ export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
         <button
           className="stats-panel__toggle"
           onClick={() => setShowStats((s) => !s)}
-          aria-label="toggle-stats"
+          aria-expanded={showStats}
+          data-testid="stats-toggle"
         >
           {showStats ? 'Скрыть статистику' : 'Показать статистику'}
         </button>
@@ -51,11 +52,27 @@ export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
             {yearStats.mostCommonMood && (
               <div className="stats-panel__row">
                 <span>Частое настроение</span>
-                <span className={`stats-panel__mood-dot stats-panel__mood-dot--${yearStats.mostCommonMood}`} />
+                <span className="stats-panel__mood-value">
+                  <span
+                    className={`stats-panel__mood-dot stats-panel__mood-dot--${yearStats.mostCommonMood}`}
+                    aria-hidden
+                  />
+                  <span>{MOOD_LABELS[yearStats.mostCommonMood]}</span>
+                </span>
               </div>
             )}
             {yearStats.filledDays > 0 && (
-              <div className="stats-panel__mood-distribution">
+              <div
+                className="stats-panel__mood-distribution"
+                role="img"
+                aria-label={`Распределение настроений: ${MOODS
+                  .map((mood) => {
+                    const pct = Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100);
+                    return pct > 0 ? `${MOOD_LABELS[mood]} ${pct}%` : null;
+                  })
+                  .filter(Boolean)
+                  .join(', ')}`}
+              >
                 {MOODS.map((mood) => {
                   const pct = yearStats.filledDays > 0
                     ? Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100)
@@ -65,7 +82,7 @@ export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
                       key={mood}
                       className={`stats-panel__mood-segment stats-panel__mood-segment--${mood}`}
                       style={{ width: `${pct}%` }}
-                      title={`${mood}: ${pct}%`}
+                      title={`${MOOD_LABELS[mood]}: ${pct}%`}
                     />
                   ) : null;
                 })}

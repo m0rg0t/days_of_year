@@ -52,6 +52,11 @@ vi.mock('../vkPlatform', () => ({
   getVkPlatform: vi.fn(() => 'desktop_web'),
 }));
 
+vi.mock('../storyImage', () => ({
+  createStoryImageDataUrl: vi.fn(() => 'data:image/png;base64,STORY'),
+}));
+
+import { createStoryImageDataUrl } from '../storyImage';
 import App from '../App';
 
 afterEach(() => {
@@ -72,7 +77,7 @@ describe('App', () => {
 
     render(<App />);
     expect(screen.getByText('Дни года')).toBeInTheDocument();
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
   });
 
   it('handles corrupted localStorage', () => {
@@ -82,7 +87,7 @@ describe('App', () => {
     localStorage.setItem('days_of_year:v1', '{not-json');
 
     render(<App />);
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
   });
 
   it('ignores incompatible stored version', () => {
@@ -92,7 +97,7 @@ describe('App', () => {
     localStorage.setItem('days_of_year:v1', JSON.stringify({ version: 2, year: 2020, days: {}}));
 
     render(<App />);
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
   });
 
   it('clicking a day selects it (shows date in footer)', () => {
@@ -100,8 +105,8 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     render(<App />);
-    const grid = screen.getAllByLabelText('days-grid')[0];
-    const first = grid.querySelector('button[aria-label="2026-01-01"]');
+    const grid = screen.getAllByTestId('days-grid')[0];
+    const first = grid.querySelector('button[data-date="2026-01-01"]');
     expect(first).toBeTruthy();
     fireEvent.click(first!);
     expect(screen.getByText('2026-01-01')).toBeInTheDocument();
@@ -122,8 +127,8 @@ describe('App', () => {
     await Promise.resolve();
 
     // selecting that past day should show mood editor with stored data
-    const grid = screen.getAllByLabelText('days-grid')[0];
-    const first = grid.querySelector('button[aria-label="2026-01-01"]');
+    const grid = screen.getAllByTestId('days-grid')[0];
+    const first = grid.querySelector('button[data-date="2026-01-01"]');
     fireEvent.click(first!);
     // Past days now show the editable form, word should be in the input
     const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
@@ -155,11 +160,11 @@ describe('App', () => {
     render(<App />);
 
     // mood buttons should be visible for today
-    fireEvent.click(screen.getByLabelText('mood-blue'));
-    fireEvent.click(screen.getByLabelText('mood-green'));
-    fireEvent.click(screen.getByLabelText('mood-red'));
-    fireEvent.click(screen.getByLabelText('mood-yellow'));
-    fireEvent.click(screen.getByLabelText('mood-reset'));
+    fireEvent.click(screen.getByTestId('mood-blue'));
+    fireEvent.click(screen.getByTestId('mood-green'));
+    fireEvent.click(screen.getByTestId('mood-red'));
+    fireEvent.click(screen.getByTestId('mood-yellow'));
+    fireEvent.click(screen.getByTestId('mood-reset'));
 
     expect(setYearMock).toHaveBeenCalled();
 
@@ -207,7 +212,7 @@ describe('App', () => {
 
     render(<App />);
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
     // jsdom normalises hex → rgb
     expect(document.body.style.background).toBe('rgb(10, 10, 10)');
   });
@@ -225,7 +230,7 @@ describe('App', () => {
 
     render(<App />);
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
     expect(document.body.style.background).toBe('rgb(235, 237, 240)');
     expect(document.body.style.color).toBe('rgb(26, 26, 30)');
   });
@@ -252,12 +257,12 @@ describe('App', () => {
     });
 
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
     expect(document.body.style.background).toBe('rgb(235, 237, 240)');
 
     // Also test with a non-config event (should be ignored)
     listener!({ detail: { type: 'VKWebAppGetAuthToken', data: {} } });
-    expect(screen.getByLabelText('days-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('days-grid')).toBeInTheDocument();
   });
 
   it('allows mood editing for past days', () => {
@@ -265,12 +270,12 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     render(<App />);
-    const grid = screen.getByLabelText('days-grid');
+    const grid = screen.getByTestId('days-grid');
     // Click a past day (Jan 5)
-    const pastDay = grid.querySelector('button[aria-label="2026-01-05"]');
+    const pastDay = grid.querySelector('button[data-date="2026-01-05"]');
     fireEvent.click(pastDay!);
     // Mood selector should be visible for past days
-    expect(screen.getByLabelText('mood-blue')).toBeInTheDocument();
+    expect(screen.getByTestId('mood-blue')).toBeInTheDocument();
     expect(screen.getByText('Что было важным?')).toBeInTheDocument();
   });
 
@@ -279,12 +284,12 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     render(<App />);
-    const grid = screen.getByLabelText('days-grid');
+    const grid = screen.getByTestId('days-grid');
     // Click a future day (Feb 15)
-    const futureDay = grid.querySelector('button[aria-label="2026-02-15"]');
+    const futureDay = grid.querySelector('button[data-date="2026-02-15"]');
     fireEvent.click(futureDay!);
     // Should show read-only trace, not mood selector
-    expect(screen.queryByLabelText('mood-blue')).toBeNull();
+    expect(screen.queryByTestId('mood-blue')).toBeNull();
     expect(screen.getAllByText(/настроение: —/)[0]).toBeInTheDocument();
   });
 
@@ -305,13 +310,13 @@ describe('App', () => {
     expect(screen.getByText('2026')).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByLabelText('prev-year'));
+      fireEvent.click(screen.getByTestId('prev-year'));
     });
 
     expect(screen.getByText('2025')).toBeInTheDocument();
     // Grid should re-render with 2025 days
-    const grid = screen.getByLabelText('days-grid');
-    expect(grid.querySelector('button[aria-label="2025-01-01"]')).toBeTruthy();
+    const grid = screen.getByTestId('days-grid');
+    expect(grid.querySelector('button[data-date="2025-01-01"]')).toBeTruthy();
   });
 
   it('year navigation: → is disabled for current year', () => {
@@ -319,7 +324,7 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     render(<App />);
-    const nextBtn = screen.getByLabelText('next-year');
+    const nextBtn = screen.getByTestId('next-year');
     expect(nextBtn).toBeDisabled();
   });
 
@@ -331,7 +336,7 @@ describe('App', () => {
     expect(document.querySelector('.year-nav__progress')).toBeTruthy();
 
     await act(async () => {
-      fireEvent.click(screen.getByLabelText('prev-year'));
+      fireEvent.click(screen.getByTestId('prev-year'));
     });
 
     expect(document.querySelector('.year-nav__progress')).toBeNull();
@@ -356,7 +361,7 @@ describe('App', () => {
 
     try {
       render(<App />);
-      fireEvent.click(screen.getByLabelText('jump-month-8'));
+      fireEvent.click(screen.getByTestId('jump-month-8'));
       expect(screen.getByText(/2026-08-01/)).toBeInTheDocument();
     } finally {
       Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
@@ -377,12 +382,12 @@ describe('App', () => {
       expect(screen.queryByTestId('stats-panel')).toBeNull();
 
       // Click toggle to show
-      fireEvent.click(screen.getByLabelText('toggle-stats'));
+      fireEvent.click(screen.getByTestId('stats-toggle'));
       expect(screen.getByTestId('stats-panel')).toBeInTheDocument();
       expect(screen.getByTestId('badges-row')).toBeInTheDocument();
 
       // Click toggle to hide
-      fireEvent.click(screen.getByLabelText('toggle-stats'));
+      fireEvent.click(screen.getByTestId('stats-toggle'));
       expect(screen.queryByTestId('stats-panel')).toBeNull();
     } finally {
       Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
@@ -420,8 +425,8 @@ describe('App', () => {
     }));
 
     render(<App />);
-    const grid = screen.getByLabelText('days-grid');
-    const dayWithMood = grid.querySelector('button[aria-label="2026-01-01"]');
+    const grid = screen.getByTestId('days-grid');
+    const dayWithMood = grid.querySelector('button[data-date="2026-01-01"]');
     expect(dayWithMood).toBeTruthy();
     expect(dayWithMood!.className).toContain('mood-blue');
   });
@@ -462,8 +467,8 @@ describe('App', () => {
       await Promise.resolve();
     });
 
-    const grid = screen.getByLabelText('days-grid');
-    const first = grid.querySelector('button[aria-label="2026-01-01"]');
+    const grid = screen.getByTestId('days-grid');
+    const first = grid.querySelector('button[data-date="2026-01-01"]');
     fireEvent.click(first!);
 
     const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
@@ -489,12 +494,98 @@ describe('App', () => {
       await Promise.resolve();
     });
 
-    const grid = screen.getByLabelText('days-grid');
-    const first = grid.querySelector('button[aria-label="2026-01-01"]');
+    const grid = screen.getByTestId('days-grid');
+    const first = grid.querySelector('button[data-date="2026-01-01"]');
     fireEvent.click(first!);
 
     const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
     expect(input.value).toBe('fallback');
+  });
+
+  it('shares the year to a VK story via VKWebAppShowStoryBox', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Поделиться в историю'));
+      await Promise.resolve();
+    });
+
+    expect(vi.mocked(createStoryImageDataUrl)).toHaveBeenCalled();
+    expect(
+      vi.mocked(bridge.send).mock.calls.some((c) => c[0] === 'VKWebAppShowStoryBox'),
+    ).toBe(true);
+  });
+
+  it('skips story share when no image data is produced', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    vi.mocked(createStoryImageDataUrl).mockReturnValueOnce(null);
+
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Поделиться в историю'));
+      await Promise.resolve();
+    });
+
+    expect(
+      vi.mocked(bridge.send).mock.calls.some((c) => c[0] === 'VKWebAppShowStoryBox'),
+    ).toBe(false);
+  });
+
+  it('opens the day modal on mobile by re-tapping the selected day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      render(<App />);
+      const grid = screen.getByTestId('days-grid');
+      const day = grid.querySelector('button[title="2026-01-05"]') as HTMLButtonElement;
+      expect(day).toBeTruthy();
+
+      // First tap selects, second tap opens the modal.
+      fireEvent.click(day);
+      fireEvent.click(day);
+
+      expect(screen.getByText('Готово')).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    }
+  });
+
+  it('opens the day modal on mobile via the Открыть button', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      render(<App />);
+      fireEvent.click(screen.getByText('Открыть'));
+      expect(screen.getByText('Готово')).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    }
+  });
+
+  it('shares the app link via VKWebAppShare', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    fireEvent.click(screen.getByText('Поделиться'));
+
+    expect(
+      vi.mocked(bridge.send).mock.calls.some((c) => c[0] === 'VKWebAppShare'),
+    ).toBe(true);
   });
 
   it('writes only current year data to VK Storage writer', () => {

@@ -29,17 +29,39 @@ export function DayDetail({
     onUpdateDay(selectedKey, { mood });
   };
 
+  // The day's phase, spoken in the grid's dot language: today is the accent
+  // dot, an editable (past) day the filled dot, a future day the empty ring.
+  const dayPhaseClass = isToday
+    ? 'day-legend__dot--today'
+    : isEditable
+      ? 'day-legend__dot--filled'
+      : 'day-detail__dot--future';
+
   return (
     <>
-      <div className="vkui-div">
-        <div className="day-detail__pill">
-          <strong className="day-detail__pill-label">День:</strong>
-          <span>{selectedKey}</span>
-          <span className="small">({selectedDayIndex}/{totalDays})</span>
+      <div className="vkui-div day-detail__entry">
+        <div className="day-detail__meta">
+          {/* date stays its own isolated text node (getByText) */}
+          <span className="day-detail__date">{selectedKey}</span>
+
+          {/* one dot in the grid's own language marks THIS day's phase
+              (lived / today / ahead) — a per-day reading, not decoration */}
+          <span
+            className="day-detail__progress"
+            aria-label={`День ${selectedDayIndex} из ${totalDays}${isToday ? ', сегодня' : isEditable ? ', прошедший' : ', будущий'}`}
+          >
+            <span className={`day-legend__dot ${dayPhaseClass}`} aria-hidden />
+            <span className="day-detail__count" aria-hidden>
+              {selectedDayIndex}<span className="day-detail__count-sep">/</span>{totalDays}
+            </span>
+          </span>
         </div>
-        <div className="day-detail__quote" data-testid="quote-block">
+
+        {/* bare editorial quote in real Russian « » (pseudo-elements keep
+            the quote-block textContent equal to the quote string) */}
+        <p className="day-detail__quote" data-testid="quote-block">
           {getQuoteForDate(selectedKey)}
-        </div>
+        </p>
       </div>
 
       {isEditable ? (
@@ -51,7 +73,9 @@ export function DayDetail({
                   key={mood}
                   className={`day-detail__mood-btn ${dayData.mood === mood ? 'day-detail__mood-btn--active' : ''}`}
                   onClick={() => handleMoodSet(mood)}
-                  aria-label={`mood-${mood}`}
+                  aria-label={`Настроение: ${MOOD_LABELS[mood]}`}
+                  aria-pressed={dayData.mood === mood}
+                  data-testid={`mood-${mood}`}
                 >
                   <span className={`day-detail__mood-dot day-detail__mood-dot--${mood}`} />
                   <span className="day-detail__mood-label">{MOOD_LABELS[mood]}</span>
@@ -60,9 +84,10 @@ export function DayDetail({
               <button
                 className="day-detail__mood-btn"
                 onClick={() => handleMoodSet(undefined)}
-                aria-label="mood-reset"
+                aria-label="Сбросить настроение"
+                data-testid="mood-reset"
               >
-                <span className="day-detail__mood-reset">✕</span>
+                <span className="day-detail__mood-reset" aria-hidden>✕</span>
               </button>
             </div>
           </Group>

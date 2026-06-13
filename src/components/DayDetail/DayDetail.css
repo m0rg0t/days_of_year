@@ -1,83 +1,137 @@
-.day-detail__pill {
+/* Day entry: typographic rhythm, no card chrome (replaces the old bordered
+   pill + left-accent-bar quote). */
+
+.day-detail__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.day-detail__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* The date is the quiet anchor — kept as its own sole text node. */
+.day-detail__date {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--vkui--color_text_primary);
+}
+
+/* Counter as a live three-state reading of the grid legend
+   (past · today · ahead), reusing the grid's own .day-legend__dot tokens. */
+.day-detail__progress {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--accent-border, rgba(67, 123, 255, 0.2));
-  background: var(--vkui--color_background_secondary_alpha);
-  border-radius: 12px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 1px 2px var(--vkui--color_overlay_primary);
+  gap: 5px;
 }
 
-.day-detail__pill-label {
-  min-width: 96px;
+.day-detail__progress .day-legend__dot {
+  width: 10px;
+  height: 10px;
 }
 
-.day-detail__quote {
-  margin-top: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--vkui--color_background_secondary_alpha);
-  border: 1px solid var(--accent-border, rgba(67, 123, 255, 0.2));
-  backdrop-filter: blur(8px);
-  font-style: italic;
-  font-size: 13px;
+/* future = the legend's empty ring, faded like the year ahead. */
+.day-detail__dot--future {
+  opacity: 0.5;
+}
+
+.day-detail__count {
+  margin-left: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--vkui--color_text_secondary);
-  line-height: 1.5;
+}
+
+.day-detail__count-sep {
+  margin: 0 1px;
+  opacity: 0.5;
+}
+
+/* Quote: a bare editorial line — no border, no box, no surface. Real Russian
+   guillemets come from pseudo-elements so quote-block textContent stays the
+   pure quote string. */
+.day-detail__quote {
+  margin: 0;
+  padding: 0;
+  max-width: 46ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--vkui--color_text_primary);
+  text-wrap: pretty;
+}
+
+.day-detail__quote::before {
+  content: '«';
+  margin-right: 1px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.day-detail__quote::after {
+  content: '»';
+  margin-left: 1px;
+  color: var(--vkui--color_text_secondary);
+  font-weight: 500;
 }
 
 .day-detail__mood-row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .day-detail__mood-btn {
-  min-width: 36px;
-  border-radius: 12px;
+  min-width: 44px;
+  border-radius: var(--radius-md);
   border: 2px solid transparent;
-  background: transparent;
+  background: var(--vkui--color_background_secondary_alpha);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
-  transition: transform 0.15s ease, border-color 0.2s ease;
+  gap: 5px;
+  padding: 8px 6px;
+  transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .day-detail__mood-label {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.15;
   color: var(--vkui--color_text_secondary);
   white-space: nowrap;
 }
 
 .day-detail__mood-btn:hover {
-  transform: scale(1.15);
+  transform: scale(1.06);
 }
 
 .day-detail__mood-reset {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--vkui--color_text_secondary);
 }
 
 .day-detail__mood-btn--active {
-  border-color: var(--vkui--color_stroke_accent);
-  box-shadow: 0 0 0 2px var(--vkui--color_background_secondary_alpha);
+  border-color: var(--accent-stroke);
+  background: var(--vkui--color_background_secondary);
 }
 
 .day-detail__mood-dot {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
 }
 
-.day-detail__mood-dot--blue   { background: var(--mood-blue-bright, rgba(59, 130, 246, 0.85)); box-shadow: 0 0 6px var(--mood-blue-glow, rgba(59,130,246,0.4)); }
-.day-detail__mood-dot--green  { background: var(--mood-green-bright, rgba(34, 197, 94, 0.85)); box-shadow: 0 0 6px var(--mood-green-glow, rgba(34,197,94,0.4)); }
-.day-detail__mood-dot--red    { background: var(--mood-red-bright, rgba(239, 68, 68, 0.85)); box-shadow: 0 0 6px var(--mood-red-glow, rgba(239,68,68,0.4)); }
-.day-detail__mood-dot--yellow { background: var(--mood-yellow-bright, rgba(234, 179, 8, 0.85)); box-shadow: 0 0 6px var(--mood-yellow-glow, rgba(234,179,8,0.4)); }
+.day-detail__mood-dot--blue   { background: var(--mood-blue-bright); box-shadow: 0 0 6px var(--mood-blue-glow); }
+.day-detail__mood-dot--green  { background: var(--mood-green-bright); box-shadow: 0 0 6px var(--mood-green-glow); }
+.day-detail__mood-dot--red    { background: var(--mood-red-bright); box-shadow: 0 0 6px var(--mood-red-glow); }
+.day-detail__mood-dot--yellow { background: var(--mood-yellow-bright); box-shadow: 0 0 6px var(--mood-yellow-glow); }
 
 .day-detail__question {
   margin-bottom: 8px;

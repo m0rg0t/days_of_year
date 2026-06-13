@@ -4,37 +4,54 @@ html, body, #root {
 
 body {
   margin: 0;
-  /* background & color set by JS (useEffect) because VKUI tokens are scoped to AppRoot */
+  /* Base color comes from VKUI tokens applied to AppRoot; useVkTheme mirrors
+     the active scheme onto <body> so the area behind/around AppRoot (overscroll,
+     safe-area) matches the app instead of flashing a default color. */
   background: var(--vkui--color_background, #0f0f10);
   color: var(--vkui--color_text_primary, #f5f5f7);
 }
 
-/* ── Shared mood color variables ─────────── */
+/* ── Design tokens ─────────────────────────── */
 
 :root {
-  --mood-blue: rgba(59, 130, 246, 0.75);
-  --mood-green: rgba(34, 197, 94, 0.75);
-  --mood-red: rgba(239, 68, 68, 0.75);
-  --mood-yellow: rgba(234, 179, 8, 0.75);
-  --mood-blue-bright: rgba(59, 130, 246, 0.85);
-  --mood-green-bright: rgba(34, 197, 94, 0.85);
-  --mood-red-bright: rgba(239, 68, 68, 0.85);
-  --mood-yellow-bright: rgba(234, 179, 8, 0.85);
-  --mood-blue-border: rgba(59, 130, 246, 0.9);
-  --mood-green-border: rgba(34, 197, 94, 0.9);
-  --mood-red-border: rgba(239, 68, 68, 0.9);
-  --mood-yellow-border: rgba(234, 179, 8, 0.9);
-  --mood-blue-glow: rgba(59, 130, 246, 0.4);
-  --mood-green-glow: rgba(34, 197, 94, 0.4);
-  --mood-red-glow: rgba(239, 68, 68, 0.4);
-  --mood-yellow-glow: rgba(234, 179, 8, 0.4);
-  --accent: rgba(67, 123, 255, 0.95);
+  /* Radius scale — one ramp shared across cards, pills, and the grid. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Mood palette. Kept fairly solid so the hues read with enough contrast on
+     BOTH the dark and light VK schemes (a translucent fill washes out on white). */
+  --mood-blue: rgba(56, 132, 255, 0.9);
+  --mood-green: rgba(38, 196, 112, 0.9);
+  --mood-red: rgba(240, 86, 86, 0.9);
+  --mood-yellow: rgba(240, 184, 30, 0.92);
+
+  --mood-blue-bright: rgba(56, 132, 255, 1);
+  --mood-green-bright: rgba(38, 196, 112, 1);
+  --mood-red-bright: rgba(240, 86, 86, 1);
+  --mood-yellow-bright: rgba(240, 184, 30, 1);
+
+  --mood-blue-border: rgba(120, 174, 255, 0.95);
+  --mood-green-border: rgba(110, 224, 160, 0.95);
+  --mood-red-border: rgba(255, 150, 150, 0.95);
+  --mood-yellow-border: rgba(255, 214, 110, 0.95);
+
+  --mood-blue-glow: rgba(56, 132, 255, 0.45);
+  --mood-green-glow: rgba(38, 196, 112, 0.45);
+  --mood-red-glow: rgba(240, 86, 86, 0.45);
+  --mood-yellow-glow: rgba(240, 184, 30, 0.45);
+
+  /* Structural accent (distinct hue from mood-blue so "today" never reads as a
+     calm-mood day). Falls back to a fixed blue when VKUI tokens are absent. */
+  --accent: var(--vkui--color_text_accent, rgba(67, 123, 255, 0.95));
+  --accent-stroke: var(--vkui--color_stroke_accent, rgba(67, 123, 255, 0.9));
   --accent-dim: rgba(67, 123, 255, 0.25);
-  --accent-border: rgba(67, 123, 255, 0.2);
+  --accent-border: rgba(67, 123, 255, 0.28);
   --accent-glow: rgba(49, 205, 255, 0.32);
 }
 
-/* ── Shared utility classes ──────────────── */
+/* ── Shared utility classes ──────────────────── */
 
 .small {
   font-size: 12px;
@@ -43,4 +60,28 @@ body {
 
 .vkui-div {
   padding: var(--vkui--size_base_padding_vertical--regular) var(--vkui--size_base_padding_horizontal--regular);
+}
+
+/* ── Accessibility: one consistent keyboard focus ring on every custom
+     (non-VKUI) interactive control. ──────────── */
+
+.year-nav__button:focus-visible,
+.stats-panel__toggle:focus-visible,
+.day-detail__mood-btn:focus-visible,
+.mobile-month-nav__chip:focus-visible {
+  outline: 2px solid var(--accent-stroke);
+  outline-offset: 2px;
+}
+
+/* ── Accessibility: honour reduced-motion globally, not just on the grid. ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

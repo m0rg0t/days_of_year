@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeBestLayout } from '../gridLayout';
+import { computeBestLayout, gridCSSVars } from '../gridLayout';
 
 describe('gridLayout', () => {
   it('returns a fallback when box is tiny', () => {
@@ -28,5 +28,30 @@ describe('gridLayout', () => {
     const comfortable = computeBestLayout({ width: 480, density: 'comfortable' });
     const compact = computeBestLayout({ width: 480, density: 'compact' });
     expect(compact.cell).toBeLessThanOrEqual(comfortable.cell);
+  });
+
+  it('maxCell caps dot size so a wider maxWidth yields more columns, not bigger dots', () => {
+    const capped = computeBestLayout({ width: 900, maxWidth: 620, maxCell: 18 });
+    const uncapped = computeBestLayout({ width: 900 }); // default maxWidth 420, no maxCell
+
+    expect(capped.cell).toBeLessThanOrEqual(18);
+    // The wider-but-capped layout packs more, smaller columns than the narrow default.
+    expect(capped.cols).toBeGreaterThan(uncapped.cols);
+  });
+
+  it('maxWidth widens the usable area vs the default cap', () => {
+    const wide = computeBestLayout({ width: 900, maxWidth: 620 });
+    const narrow = computeBestLayout({ width: 900 }); // capped at 420
+    expect(wide.cell).toBeGreaterThanOrEqual(narrow.cell);
+  });
+});
+
+describe('gridCSSVars', () => {
+  it('maps a layout to the grid CSS custom properties', () => {
+    expect(gridCSSVars({ cols: 20, cell: 14, gap: 6 })).toEqual({
+      '--cols': 20,
+      '--cell': '14px',
+      '--gap': '6px',
+    });
   });
 });

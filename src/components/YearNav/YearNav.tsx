@@ -18,7 +18,8 @@ export function YearNav({ viewYear, currentYear, todayIndex, totalDays, onChange
         <button
           className="year-nav__button"
           onClick={() => onChangeYear(viewYear - 1)}
-          aria-label="prev-year"
+          aria-label="Предыдущий год"
+          data-testid="prev-year"
         >
           <span aria-hidden>←</span>
         </button>
@@ -27,7 +28,8 @@ export function YearNav({ viewYear, currentYear, todayIndex, totalDays, onChange
           className="year-nav__button"
           onClick={() => onChangeYear(viewYear + 1)}
           disabled={viewYear >= currentYear}
-          aria-label="next-year"
+          aria-label="Следующий год"
+          data-testid="next-year"
         >
           <span aria-hidden>→</span>
         </button>
