@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStoryImageDataUrl } from '../storyImage';
+import { dateKeyForDayIndex } from '../utils';
 import type { DayData } from '../vkYearStorage';
 
 /**
@@ -50,8 +51,9 @@ function installFakeCanvas(): FakeContext {
   return record;
 }
 
+// Real 'YYYY-MM-DD' keys (matching production), sequential from Jan 1.
 function makeKeys(n: number): string[] {
-  return Array.from({ length: n }, (_, i) => `2026-${String(i + 1).padStart(4, '0')}`);
+  return Array.from({ length: n }, (_, i) => dateKeyForDayIndex(2026, i + 1));
 }
 
 describe('createStoryImageDataUrl', () => {
@@ -102,7 +104,7 @@ describe('createStoryImageDataUrl', () => {
     expect(fills).toMatch(/26, 26, 30, 0\.06/); // empty future day
   });
 
-  it('handles archived years where todayIndex is 0 (no filled, no today ring)', () => {
+  it('renders an archived year (todayIndex 0) as fully lived — every day filled, no today ring', () => {
     const record = installFakeCanvas();
     const dateKeys = makeKeys(25);
     const url = createStoryImageDataUrl({ todayIndex: 0, days: {}, dateKeys });
@@ -110,5 +112,10 @@ describe('createStoryImageDataUrl', () => {
     expect(url).toBe('data:image/png;base64,FAKE');
     // No "today" ring -> exactly one arc per day.
     expect(record.arcs.length).toBe(dateKeys.length);
+    const fills = record.fillStyles.join('|');
+    // A past/archived year is all "lived": the filled colour is used...
+    expect(fills).toMatch(/39, 135, 245, 0\.28/);
+    // ...and the empty/future colour never appears.
+    expect(fills).not.toMatch(/26, 26, 30, 0\.06/);
   });
 });

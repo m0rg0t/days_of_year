@@ -55,7 +55,8 @@ export function DayGrid({
         {dateKeys.map((key, i) => {
           const dayIndex = i + 1;
           const data = days[key];
-          const filled = dayIndex < todayIndex;
+          // todayIndex === 0 means an archived (fully past) year — every day is lived.
+          const filled = todayIndex === 0 || dayIndex < todayIndex;
           const todayDay = dayIndex === todayIndex;
           const selected = dayIndex === selectedDayIndex;
           const mood = moodClass(data?.mood);

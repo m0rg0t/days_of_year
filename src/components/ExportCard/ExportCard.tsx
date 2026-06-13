@@ -74,7 +74,8 @@ export function ExportCard(props: {
           >
             {dateKeys.map((key, i) => {
               const dayIndex = i + 1;
-              const filled = dayIndex < todayIndex;
+              // todayIndex === 0 means an archived (fully past) year — every day is lived.
+              const filled = todayIndex === 0 || dayIndex < todayIndex;
               const isToday = dayIndex === todayIndex;
               const data = days[key];
               const mood = moodClass(data?.mood);

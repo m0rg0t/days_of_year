@@ -52,6 +52,7 @@
 .year-nav__meta {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
   padding: 2px 16px 8px;
 }
@@ -82,10 +83,6 @@
   background: linear-gradient(90deg, rgba(67, 123, 255, 0.9), rgba(49, 205, 255, 0.85));
   box-shadow: 0 0 10px var(--accent-glow, rgba(49, 205, 255, 0.3));
   transition: width 0.8s ease;
-}
-
-.year-nav__meta {
-  justify-content: center;
 }
 
 @media (min-width: 600px) {

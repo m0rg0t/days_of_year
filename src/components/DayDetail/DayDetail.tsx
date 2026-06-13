@@ -109,7 +109,7 @@ export function DayDetail({
         <Group header={<Header>След</Header>}>
           <div className="vkui-div">
             <div className="small">
-              {dayData.mood ? `настроение: ${dayData.mood}` : 'настроение: —'}
+              {dayData.mood ? `настроение: ${MOOD_LABELS[dayData.mood]}` : 'настроение: —'}
               {' · '}
               {dayData.word ? `слово: ${dayData.word}` : 'слово: —'}
             </div>

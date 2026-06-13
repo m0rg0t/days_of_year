@@ -61,33 +61,32 @@ export function StatsPanel({ yearStats, badges, isDesktop }: StatsPanelProps) {
                 </span>
               </div>
             )}
-            {yearStats.filledDays > 0 && (
-              <div
-                className="stats-panel__mood-distribution"
-                role="img"
-                aria-label={`Распределение настроений: ${MOODS
-                  .map((mood) => {
-                    const pct = Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100);
-                    return pct > 0 ? `${MOOD_LABELS[mood]} ${pct}%` : null;
-                  })
-                  .filter(Boolean)
-                  .join(', ')}`}
-              >
-                {MOODS.map((mood) => {
-                  const pct = yearStats.filledDays > 0
-                    ? Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100)
-                    : 0;
-                  return pct > 0 ? (
+            {yearStats.filledDays > 0 && (() => {
+              // Compute each mood's share once; reuse for the label and the bar.
+              const moodPercents = MOODS.map((mood) => ({
+                mood,
+                pct: Math.round((yearStats.moodCounts[mood] / yearStats.filledDays) * 100),
+              })).filter((m) => m.pct > 0);
+
+              return (
+                <div
+                  className="stats-panel__mood-distribution"
+                  role="img"
+                  aria-label={`Распределение настроений: ${moodPercents
+                    .map((m) => `${MOOD_LABELS[m.mood]} ${m.pct}%`)
+                    .join(', ')}`}
+                >
+                  {moodPercents.map((m) => (
                     <div
-                      key={mood}
-                      className={`stats-panel__mood-segment stats-panel__mood-segment--${mood}`}
-                      style={{ width: `${pct}%` }}
-                      title={`${MOOD_LABELS[mood]}: ${pct}%`}
+                      key={m.mood}
+                      className={`stats-panel__mood-segment stats-panel__mood-segment--${m.mood}`}
+                      style={{ width: `${m.pct}%` }}
+                      title={`${MOOD_LABELS[m.mood]}: ${m.pct}%`}
                     />
-                  ) : null;
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           <div className="stats-panel__badges" data-testid="badges-row">
             {badges.map((badge) => {

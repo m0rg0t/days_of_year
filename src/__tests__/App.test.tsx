@@ -316,7 +316,10 @@ describe('App', () => {
     expect(screen.getByText('2025')).toBeInTheDocument();
     // Grid should re-render with 2025 days
     const grid = screen.getByTestId('days-grid');
-    expect(grid.querySelector('button[data-date="2025-01-01"]')).toBeTruthy();
+    const archivedDay = grid.querySelector('button[data-date="2025-06-01"]');
+    expect(archivedDay).toBeTruthy();
+    // An archived (fully past) year renders every day as lived/filled, not empty.
+    expect(archivedDay!.className).toContain('day-grid__dot--filled');
   });
 
   it('year navigation: → is disabled for current year', () => {

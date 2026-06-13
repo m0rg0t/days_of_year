@@ -14,11 +14,9 @@ body {
 /* ── Design tokens ─────────────────────────── */
 
 :root {
-  /* Radius scale — one ramp shared across cards, pills, and the grid. */
-  --radius-sm: 8px;
+  /* Radius scale — shared across cards, controls, and the grid. */
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
 
   /* Mood palette. Kept fairly solid so the hues read with enough contrast on
      BOTH the dark and light VK schemes (a translucent fill washes out on white). */

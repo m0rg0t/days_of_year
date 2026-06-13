@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 import html2canvas from 'html2canvas';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Button, Group, Header } from '@vkontakte/vkui';
 import { downloadText } from '../../utils';
@@ -12,8 +13,9 @@ import { ExportCard } from '../ExportCard/ExportCard';
 import './ExportPanel.css';
 
 /**
- * The export card is a fixed-width (980px) shareable artifact, so it uses its
- * own stable grid layout independent of the on-screen (responsive) grid.
+ * The export card is a fixed shareable artifact, so its dot grid is computed
+ * once from a stable target width (clamped to the comfortable 420px cap),
+ * independent of the on-screen responsive grid and the user's density choice.
  */
 const EXPORT_LAYOUT = computeBestLayout({ width: 440 });
 
@@ -91,19 +93,25 @@ export function ExportPanel({
     try {
       document.body.appendChild(host);
       root = createRoot(host);
-      root.render(
-        <ExportCard
-          year={viewYear}
-          totalDays={totalDays}
-          todayIndex={todayIndex}
-          gridLayout={EXPORT_LAYOUT}
-          days={days}
-          dateKeys={dateKeys}
-          yearStats={yearStats}
-        />,
-      );
+      // flushSync forces React to commit the card synchronously, so the node is
+      // guaranteed mounted before html2canvas reads it (a bare setTimeout raced
+      // React 19's deferred commit and could capture an empty host).
+      flushSync(() => {
+        root!.render(
+          <ExportCard
+            year={viewYear}
+            totalDays={totalDays}
+            todayIndex={todayIndex}
+            gridLayout={EXPORT_LAYOUT}
+            days={days}
+            dateKeys={dateKeys}
+            yearStats={yearStats}
+          />,
+        );
+      });
 
-      await new Promise((r) => setTimeout(r, 30));
+      // Let fonts settle (where supported) before rasterizing.
+      await document.fonts?.ready?.catch?.(() => {});
 
       const target = host.firstElementChild as HTMLElement | null;
       if (!target) return;
