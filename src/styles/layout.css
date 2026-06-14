@@ -135,7 +135,9 @@
 
 .mobile-day-shortcut__row {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 46px;
+  /* auto side tracks size to the actual (VKUI) button width; the middle column
+     absorbs the remaining space so the row can never overflow the viewport. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }

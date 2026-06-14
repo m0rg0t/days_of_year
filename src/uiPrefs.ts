@@ -6,7 +6,9 @@ export function loadGridDensity(): GridDensity {
   try {
     const raw = localStorage.getItem(GRID_DENSITY_KEY);
     if (raw === 'compact' || raw === 'comfortable') return raw;
-    return window.innerWidth <= 420 ? 'compact' : 'comfortable';
+    // Comfortable by default everywhere — bigger, clearer dots read better,
+    // especially on mobile. Users can still switch to compact.
+    return 'comfortable';
   } catch {
     return 'comfortable';
   }

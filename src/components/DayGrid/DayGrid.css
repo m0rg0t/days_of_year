@@ -31,7 +31,9 @@
 
   display: grid;
   grid-template-columns: repeat(var(--cols), var(--cell));
-  grid-auto-rows: var(--cell);
+  /* Dot rows stay exactly one cell tall; the full-width month-label rows grow
+     to fit their text instead of being clamped (which made labels overlap dots). */
+  grid-auto-rows: minmax(var(--cell), auto);
   gap: var(--gap);
 
   max-width: 100%;
