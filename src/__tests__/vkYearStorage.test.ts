@@ -20,20 +20,29 @@ describe('vkYearStorage', () => {
   });
 
   it('yearKey format', () => {
-    expect(yearKey(2026)).toBe('doy:2026');
+    expect(yearKey(2026)).toBe('doy_2026');
   });
 
   it('monthKey format with zero-padding', () => {
-    expect(monthKey(2026, 1)).toBe('doy:2026:01');
-    expect(monthKey(2026, 12)).toBe('doy:2026:12');
+    expect(monthKey(2026, 1)).toBe('doy_2026_01');
+    expect(monthKey(2026, 12)).toBe('doy_2026_12');
+  });
+
+  it('keys use only VK-Storage-legal characters (no colons)', () => {
+    // VK Storage rejects keys outside [a-zA-Z0-9_-]; a colon made every write fail.
+    const legal = /^[a-zA-Z0-9_-]{1,100}$/;
+    expect(yearKey(2026)).toMatch(legal);
+    for (let m = 1; m <= 12; m++) {
+      expect(monthKey(2026, m)).toMatch(legal);
+    }
   });
 
   it('loadYearBlobFromVk returns parsed monthly chunks', async () => {
     mockSend.mockResolvedValue({
       keys: [
-        { key: 'doy:2026:01', value: JSON.stringify({ '2026-01-01': { word: 'jan' } }) },
-        { key: 'doy:2026:03', value: JSON.stringify({ '2026-03-15': { mood: 'great' } }) },
-        { key: 'doy:2026', value: '' },
+        { key: 'doy_2026_01', value: JSON.stringify({ '2026-01-01': { word: 'jan' } }) },
+        { key: 'doy_2026_03', value: JSON.stringify({ '2026-03-15': { mood: 'great' } }) },
+        { key: 'doy_2026', value: '' },
       ],
     } as Awaited<ReturnType<typeof bridge.send>>);
 
@@ -54,15 +63,15 @@ describe('vkYearStorage', () => {
     expect(call[0]).toBe('VKWebAppStorageGet');
     const keys = (call[1] as { keys: string[] }).keys;
     expect(keys).toHaveLength(13);
-    expect(keys).toContain('doy:2026:01');
-    expect(keys).toContain('doy:2026:12');
-    expect(keys).toContain('doy:2026');
+    expect(keys).toContain('doy_2026_01');
+    expect(keys).toContain('doy_2026_12');
+    expect(keys).toContain('doy_2026');
   });
 
   it('loadYearBlobFromVk falls back to legacy key when no monthly data', async () => {
     mockSend.mockResolvedValue({
       keys: [
-        { key: 'doy:2026', value: JSON.stringify({ '2026-01-01': { word: 'legacy' } }) },
+        { key: 'doy_2026', value: JSON.stringify({ '2026-01-01': { word: 'legacy' } }) },
       ],
     } as Awaited<ReturnType<typeof bridge.send>>);
 
@@ -73,8 +82,8 @@ describe('vkYearStorage', () => {
   it('loadYearBlobFromVk prefers monthly data over legacy', async () => {
     mockSend.mockResolvedValue({
       keys: [
-        { key: 'doy:2026:01', value: JSON.stringify({ '2026-01-01': { word: 'monthly' } }) },
-        { key: 'doy:2026', value: JSON.stringify({ '2026-01-01': { word: 'legacy' } }) },
+        { key: 'doy_2026_01', value: JSON.stringify({ '2026-01-01': { word: 'monthly' } }) },
+        { key: 'doy_2026', value: JSON.stringify({ '2026-01-01': { word: 'legacy' } }) },
       ],
     } as Awaited<ReturnType<typeof bridge.send>>);
 
@@ -84,7 +93,7 @@ describe('vkYearStorage', () => {
 
   it('loadYearBlobFromVk ignores non-object JSON', async () => {
     mockSend.mockResolvedValue({
-      keys: [{ key: 'doy:2026', value: JSON.stringify('oops') }],
+      keys: [{ key: 'doy_2026', value: JSON.stringify('oops') }],
     } as Awaited<ReturnType<typeof bridge.send>>);
 
     const res = await loadYearBlobFromVk(2026);
@@ -93,7 +102,7 @@ describe('vkYearStorage', () => {
 
   it('loadYearBlobFromVk ignores null JSON', async () => {
     mockSend.mockResolvedValue({
-      keys: [{ key: 'doy:2026', value: 'null' }],
+      keys: [{ key: 'doy_2026', value: 'null' }],
     } as Awaited<ReturnType<typeof bridge.send>>);
 
     const res = await loadYearBlobFromVk(2026);
@@ -135,22 +144,22 @@ describe('vkYearStorage', () => {
     }));
 
     // Monthly chunk for January
-    const janCall = callArgs.find((c) => c.key === 'doy:2026:01');
+    const janCall = callArgs.find((c) => c.key === 'doy_2026_01');
     expect(janCall).toBeDefined();
     expect(JSON.parse(janCall!.value)).toEqual({ '2026-01-01': { word: 'b' } });
 
     // Monthly chunk for March
-    const marCall = callArgs.find((c) => c.key === 'doy:2026:03');
+    const marCall = callArgs.find((c) => c.key === 'doy_2026_03');
     expect(marCall).toBeDefined();
     expect(JSON.parse(marCall!.value)).toEqual({ '2026-03-15': { mood: 'great' } });
 
     // Empty month is cleared
-    const febCall = callArgs.find((c) => c.key === 'doy:2026:02');
+    const febCall = callArgs.find((c) => c.key === 'doy_2026_02');
     expect(febCall).toBeDefined();
     expect(febCall!.value).toBe('');
 
     // Legacy key cleared
-    const legacyClear = callArgs.find((c) => c.key === 'doy:2026');
+    const legacyClear = callArgs.find((c) => c.key === 'doy_2026');
     expect(legacyClear).toBeDefined();
     expect(legacyClear!.value).toBe('');
   });
@@ -168,8 +177,8 @@ describe('vkYearStorage', () => {
     expect(mockSend.mock.calls.length).toBe(13);
 
     const keys = mockSend.mock.calls.map((c) => (c[1] as { key: string }).key);
-    expect(keys).toContain('doy:2026:05');
-    expect(keys).toContain('doy:2026');
+    expect(keys).toContain('doy_2026_05');
+    expect(keys).toContain('doy_2026');
   });
 
   it('writer reports saving and saved states', async () => {
@@ -197,7 +206,7 @@ describe('vkYearStorage', () => {
     vi.advanceTimersByTime(650);
     await vi.runAllTicks();
 
-    const janCall = mockSend.mock.calls.find((call) => (call[1] as { key: string }).key === 'doy:2026:01');
+    const janCall = mockSend.mock.calls.find((call) => (call[1] as { key: string }).key === 'doy_2026_01');
     expect(janCall).toBeDefined();
     expect((janCall![1] as { value: string }).value).toBe('');
   });

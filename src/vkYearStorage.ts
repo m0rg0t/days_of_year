@@ -11,16 +11,18 @@ export type VkSyncState = {
   savedAt?: number;
 };
 
-const KEY_PREFIX = 'doy:'; // doy:YYYY (legacy) or doy:YYYY:MM (monthly)
+// VK Storage keys may only contain [a-zA-Z0-9_-] (max 100 chars) — colons are
+// rejected, so the separator is an underscore, not ":".
+const KEY_PREFIX = 'doy_'; // doy_YYYY (legacy) or doy_YYYY_MM (monthly)
 
-/** Legacy whole-year key: `doy:YYYY` */
+/** Legacy whole-year key: `doy_YYYY` */
 export function yearKey(year: number) {
   return `${KEY_PREFIX}${year}`;
 }
 
-/** Monthly chunk key: `doy:YYYY:MM` (MM is zero-padded) */
+/** Monthly chunk key: `doy_YYYY_MM` (MM is zero-padded) */
 export function monthKey(year: number, month: number) {
-  return `${KEY_PREFIX}${year}:${String(month).padStart(2, '0')}`;
+  return `${KEY_PREFIX}${year}_${String(month).padStart(2, '0')}`;
 }
 
 function safeParse(raw: string | undefined | null): Record<string, DayData> | null {
