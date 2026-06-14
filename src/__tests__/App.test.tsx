@@ -172,7 +172,8 @@ describe('App', () => {
     fireEvent.change(input, { target: { value: 'фокус' } });
     expect(input.value).toBe('фокус');
 
-    // export Markdown
+    // expand the collapsed export panel, then export Markdown
+    fireEvent.click(screen.getByTestId('export-toggle'));
     fireEvent.click(screen.getByText('Скачать Markdown'));
 
     // export PNG -> should fall back to anchor download
@@ -192,6 +193,7 @@ describe('App', () => {
     vi.mocked(bridge.send).mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
 
     render(<App />);
+    fireEvent.click(screen.getByTestId('export-toggle'));
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить PNG' }));
 
     await new Promise((r) => setTimeout(r, 80));
@@ -211,6 +213,7 @@ describe('App', () => {
 
     try {
       render(<App />);
+      fireEvent.click(screen.getByTestId('export-toggle'));
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Сохранить PNG' }));
         await new Promise((r) => setTimeout(r, 80));
@@ -470,11 +473,28 @@ describe('App', () => {
     vi.mocked(isDesktopWeb).mockReturnValue(false);
 
     render(<App />);
+    fireEvent.click(screen.getByTestId('export-toggle'));
     expect(screen.getByText('Сохранить PNG')).toBeInTheDocument();
     expect(screen.getByText('Скачать Markdown')).toBeInTheDocument();
     expect(screen.getByText('Поделиться')).toBeInTheDocument();
 
     vi.mocked(isDesktopWeb).mockReturnValue(true);
+  });
+
+  it('export panel is collapsed by default and expands on toggle', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
+
+    render(<App />);
+    // Collapsed: the export buttons are not in the DOM yet.
+    expect(screen.queryByText('Сохранить PNG')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('export-toggle'));
+    expect(screen.getByText('Сохранить PNG')).toBeInTheDocument();
+
+    // Toggling again collapses it.
+    fireEvent.click(screen.getByTestId('export-toggle'));
+    expect(screen.queryByText('Сохранить PNG')).toBeNull();
   });
 
   it('VK Storage data takes priority over localStorage', async () => {
@@ -615,6 +635,7 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
     render(<App />);
+    fireEvent.click(screen.getByTestId('export-toggle'));
     fireEvent.click(screen.getByText('Поделиться'));
 
     expect(
