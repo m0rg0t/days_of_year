@@ -194,6 +194,11 @@ export function ExportPanel({
 
   return (
     <Group header={<Header>Экспорт</Header>}>
+      {/* Sync status stays OUTSIDE the collapse — it must report VK Storage
+          health (saved / failed) even when the export controls are hidden. */}
+      <div className="vkui-div small">
+        {formatSyncState(vkSyncState)}
+      </div>
       <div className="vkui-div">
         <button
           className="export-panel__toggle"
@@ -201,7 +206,8 @@ export function ExportPanel({
           aria-expanded={isOpen}
           data-testid="export-toggle"
         >
-          {isOpen ? 'Скрыть экспорт' : 'Сохранить, скачать, поделиться'}
+          <span>{isOpen ? 'Скрыть экспорт' : 'Сохранить, скачать, поделиться'}</span>
+          <span className="export-panel__toggle-chevron" aria-hidden>{isOpen ? '▴' : '▾'}</span>
         </button>
       </div>
       {isOpen && (
@@ -216,9 +222,6 @@ export function ExportPanel({
             <Button size="m" mode="secondary" onClick={shareVk}>
               Поделиться
             </Button>
-          </div>
-          <div className="vkui-div small">
-            {formatSyncState(vkSyncState)}
           </div>
           <div className="vkui-div small">
             Локальная копия хранится в `localStorage`. PNG сначала сохраняется прямо на устройство; если это недоступно — на мобильных внутри VK файл выгружается через `VKWebAppDownloadFile`.

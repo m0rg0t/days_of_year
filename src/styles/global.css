@@ -65,6 +65,7 @@ body {
 
 .year-nav__button:focus-visible,
 .stats-panel__toggle:focus-visible,
+.export-panel__toggle:focus-visible,
 .day-detail__mood-btn:focus-visible,
 .mobile-month-nav__chip:focus-visible {
   outline: 2px solid var(--accent-stroke);

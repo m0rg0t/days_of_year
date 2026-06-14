@@ -1,4 +1,8 @@
 .export-panel__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-md);
@@ -14,9 +18,10 @@
   border-color: var(--accent-border);
 }
 
-.export-panel__toggle:focus-visible {
-  outline: 2px solid var(--accent-stroke);
-  outline-offset: 2px;
+.export-panel__toggle-chevron {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--vkui--color_text_secondary);
 }
 
 .export-panel__row {
