@@ -100,6 +100,7 @@ export function DayDetail({
               <Input
                 placeholder="одно слово"
                 value={dayData.word || ''}
+                maxLength={64}
                 onChange={(e) => onUpdateDay(selectedKey, { word: e.target.value })}
               />
             </div>
