@@ -92,6 +92,11 @@ type VkYearBlobWriterOptions = {
 export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOptions = {}) {
   let pending: Record<string, DayData> | null = null;
   let timer: number | null = null;
+  // Last value string successfully written per month, so each flush only
+  // re-sends months whose content actually changed (instead of 13 writes per
+  // edit, which would hammer VK Storage's per-user write rate limit).
+  const lastWritten = new Map<number, string>();
+  let legacyCleared = false;
 
   async function flush() {
     timer = null;
@@ -102,32 +107,45 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
 
     try {
       const groups = groupByMonth(payload);
-      const monthNumbers = Array.from({ length: 12 }, (_, index) => index + 1);
 
-      const writes: Promise<unknown>[] = [];
-      for (const month of monthNumbers) {
+      const writes: Array<{ apply: () => void; promise: Promise<unknown> }> = [];
+
+      for (let month = 1; month <= 12; month++) {
         const monthDays = groups.get(month) ?? null;
-        writes.push(
-          bridge.send('VKWebAppStorageSet', {
-            key: monthKey(year, month),
-            value: monthDays ? JSON.stringify(monthDays) : '',
-          }),
-        );
+        const value = monthDays ? JSON.stringify(monthDays) : '';
+        // Skip unchanged months (including empty months never written before).
+        if (value === (lastWritten.get(month) ?? '')) continue;
+        writes.push({
+          apply: () => lastWritten.set(month, value),
+          promise: bridge.send('VKWebAppStorageSet', { key: monthKey(year, month), value }),
+        });
       }
 
-      // Clear legacy key to complete migration
-      writes.push(
-        bridge.send('VKWebAppStorageSet', {
-          key: yearKey(year),
-          value: '',
-        }),
-      );
+      // Clear the legacy whole-year key once (migration), not on every flush.
+      if (!legacyCleared) {
+        writes.push({
+          apply: () => { legacyCleared = true; },
+          promise: bridge.send('VKWebAppStorageSet', { key: yearKey(year), value: '' }),
+        });
+      }
 
-      await Promise.all(writes);
-      options.onStateChange?.({
-        status: 'saved',
-        savedAt: Date.now(),
+      if (writes.length === 0) {
+        options.onStateChange?.({ status: 'saved', savedAt: Date.now() });
+        return;
+      }
+
+      // allSettled so one throttled/failed write doesn't discard the others;
+      // only mark a month as written when its own write succeeds (failures retry).
+      const results = await Promise.allSettled(writes.map((w) => w.promise));
+      let anyFailed = false;
+      results.forEach((res, i) => {
+        if (res.status === 'fulfilled') writes[i].apply();
+        else anyFailed = true;
       });
+
+      options.onStateChange?.(
+        anyFailed ? { status: 'error' } : { status: 'saved', savedAt: Date.now() },
+      );
     } catch {
       options.onStateChange?.({ status: 'error' });
       // ignore: localStorage remains fallback
@@ -138,7 +156,8 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
     /**
      * Queue full-year blob update (debounced).
      * Caller passes the full year map (dateKey -> DayData).
-     * Internally splits into monthly chunks for VK Storage.
+     * Splits into monthly chunks and writes only the months that changed since
+     * the last successful flush.
      */
     setYear(days: Record<string, DayData>) {
       pending = days;
