@@ -1,7 +1,29 @@
+.export-panel__toggle {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--vkui--color_separator_primary_alpha);
+  background: var(--vkui--color_background_secondary_alpha);
+  color: var(--vkui--color_text_primary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.export-panel__toggle:hover {
+  border-color: var(--accent-border);
+}
+
+.export-panel__toggle:focus-visible {
+  outline: 2px solid var(--accent-stroke);
+  outline-offset: 2px;
+}
+
 .export-panel__row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 

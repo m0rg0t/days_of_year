@@ -72,6 +72,7 @@ export function ExportPanel({
   isDesktopWeb,
 }: ExportPanelProps) {
   const [isExportingPng, setIsExportingPng] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const markdownFilename = `days-of-year-${viewYear}.md`;
   const markdownText = useMemo(() => buildYearMarkdownReport({
     year: viewYear,
@@ -193,27 +194,41 @@ export function ExportPanel({
 
   return (
     <Group header={<Header>Экспорт</Header>}>
-      <div className="vkui-div export-panel__row">
-        <Button size="m" mode="primary" onClick={exportPng} loading={isExportingPng} disabled={isExportingPng}>
-          Сохранить PNG
-        </Button>
-        <Button size="m" mode="secondary" onClick={exportMarkdown}>
-          Скачать Markdown
-        </Button>
-        <Button size="m" mode="secondary" onClick={shareVk}>
-          Поделиться
-        </Button>
+      <div className="vkui-div">
+        <button
+          className="export-panel__toggle"
+          onClick={() => setIsOpen((o) => !o)}
+          aria-expanded={isOpen}
+          data-testid="export-toggle"
+        >
+          {isOpen ? 'Скрыть экспорт' : 'Сохранить, скачать, поделиться'}
+        </button>
       </div>
-      <div className="vkui-div small">
-        {formatSyncState(vkSyncState)}
-      </div>
-      <div className="vkui-div small">
-        Локальная копия хранится в `localStorage`. PNG сначала сохраняется прямо на устройство; если это недоступно — на мобильных внутри VK файл выгружается через `VKWebAppDownloadFile`.
-      </div>
-      <div className="vkui-div export-panel__markdown">
-        <div className="export-panel__markdown-head">{markdownFilename}</div>
-        <pre className="export-panel__markdown-body">{markdownText}</pre>
-      </div>
+      {isOpen && (
+        <>
+          <div className="vkui-div export-panel__row">
+            <Button size="m" mode="primary" onClick={exportPng} loading={isExportingPng} disabled={isExportingPng}>
+              Сохранить PNG
+            </Button>
+            <Button size="m" mode="secondary" onClick={exportMarkdown}>
+              Скачать Markdown
+            </Button>
+            <Button size="m" mode="secondary" onClick={shareVk}>
+              Поделиться
+            </Button>
+          </div>
+          <div className="vkui-div small">
+            {formatSyncState(vkSyncState)}
+          </div>
+          <div className="vkui-div small">
+            Локальная копия хранится в `localStorage`. PNG сначала сохраняется прямо на устройство; если это недоступно — на мобильных внутри VK файл выгружается через `VKWebAppDownloadFile`.
+          </div>
+          <div className="vkui-div export-panel__markdown">
+            <div className="export-panel__markdown-head">{markdownFilename}</div>
+            <pre className="export-panel__markdown-body">{markdownText}</pre>
+          </div>
+        </>
+      )}
     </Group>
   );
 }
