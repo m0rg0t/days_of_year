@@ -57,6 +57,7 @@ vi.mock('../storyImage', () => ({
 }));
 
 import { createStoryImageDataUrl } from '../storyImage';
+import { ONBOARDING_SEEN_KEY } from '../onboardingPrefs';
 import App from '../App';
 
 afterEach(() => {
@@ -71,6 +72,27 @@ afterEach(() => {
 });
 
 describe('App', () => {
+  it('shows onboarding only on the first launch', () => {
+    render(<App />);
+
+    expect(screen.getByTestId('onboarding')).toBeInTheDocument();
+    expect(screen.getByText('Весь год перед глазами')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Начать отмечать дни' }));
+    expect(localStorage.getItem(ONBOARDING_SEEN_KEY)).toBe('1');
+
+    cleanup();
+    render(<App />);
+    expect(screen.queryByTestId('onboarding')).toBeNull();
+  });
+
+  it('marks onboarding as complete when it is closed', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть онбординг' }));
+
+    expect(localStorage.getItem(ONBOARDING_SEEN_KEY)).toBe('1');
+  });
+
   it('renders grid and title', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
@@ -395,6 +417,10 @@ describe('App', () => {
 
     try {
       render(<App />);
+      const openButton = screen.getByText('Открыть');
+      const grid = screen.getByTestId('days-grid');
+      expect(openButton.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
       fireEvent.click(screen.getByTestId('jump-month-8'));
       expect(screen.getByText(/2026-08-01/)).toBeInTheDocument();
     } finally {
@@ -491,6 +517,8 @@ describe('App', () => {
 
     fireEvent.click(screen.getByTestId('export-toggle'));
     expect(screen.getByText('Сохранить PNG')).toBeInTheDocument();
+    expect(screen.getByText('PNG сохранит визуальную карточку года, а Markdown — текстовый отчёт.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/VKWebAppDownloadFile|localStorage/);
 
     // Toggling again collapses it.
     fireEvent.click(screen.getByTestId('export-toggle'));

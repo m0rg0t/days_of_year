@@ -19,6 +19,7 @@ import bridge from '@vkontakte/vk-bridge';
 import './styles/global.css';
 import './styles/layout.css';
 import { loadGridDensity, saveGridDensity } from './uiPrefs';
+import { hasSeenOnboarding, markOnboardingSeen } from './onboardingPrefs';
 import { useGridLayout } from './hooks/useGridLayout';
 import { useVkTheme } from './hooks/useVkTheme';
 import { useIsDesktop } from './hooks/useIsDesktop';
@@ -28,16 +29,20 @@ import { isDesktopWeb as checkDesktopWeb } from './vkPlatform';
 
 import { AppCalendarSection } from './components/AppCalendarSection/AppCalendarSection';
 import { AppDayModal } from './components/AppDayModal/AppDayModal';
+import { AppOnboarding } from './components/AppOnboarding/AppOnboarding';
 import { AppSidebar } from './components/AppSidebar/AppSidebar';
 import { YearNav } from './components/YearNav/YearNav';
 
 const DAY_DETAIL_MODAL = 'day-detail-modal';
+const ONBOARDING_MODAL = 'onboarding-modal';
 
 export default function App() {
   const colorScheme = useVkTheme();
   const [gridDensity, setGridDensity] = useState(() => loadGridDensity());
   const [isSharingStory, setIsSharingStory] = useState(false);
-  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<string | null>(() => (
+    hasSeenOnboarding() ? null : ONBOARDING_MODAL
+  ));
   const isDesktop = useIsDesktop();
   // On roomy desktop columns, let the grid grow wider but keep dots capped so
   // it reads as a dense, centered block instead of leaving a void to the right.
@@ -80,14 +85,17 @@ export default function App() {
   }, [gridDensity]);
 
   useEffect(() => {
-    if (isDesktop && activeModal) setActiveModal(null);
+    if (isDesktop && activeModal === DAY_DETAIL_MODAL) setActiveModal(null);
   }, [isDesktop, activeModal]);
 
   const gridHint = isDesktop
     ? 'Нажмите на день, чтобы открыть карточку справа.'
     : 'Коснитесь дня, затем откройте карточку кнопкой ниже (повторный тап тоже откроет).';
 
-  const closeModal = useCallback(() => setActiveModal(null), []);
+  const closeModal = useCallback(() => {
+    if (activeModal === ONBOARDING_MODAL) markOnboardingSeen();
+    setActiveModal(null);
+  }, [activeModal]);
 
   const handleSelectDay = useCallback((dayIndex: number) => {
     if (!isDesktop && dayIndex === selectedDayIndex) {
@@ -136,6 +144,10 @@ export default function App() {
           <SplitLayout
             modal={(
               <ModalRoot activeModal={activeModal} onClose={closeModal}>
+                <AppOnboarding
+                  id={ONBOARDING_MODAL}
+                  onComplete={closeModal}
+                />
                 <AppDayModal
                   id={DAY_DETAIL_MODAL}
                   onClose={closeModal}

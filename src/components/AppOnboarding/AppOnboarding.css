@@ -1,0 +1,137 @@
+.onboarding {
+  box-sizing: border-box;
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.onboarding__visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 68px;
+  margin: 0 auto 16px;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(80% 140% at 50% 0%, var(--accent-dim), transparent 70%),
+    var(--vkui--color_background_secondary_alpha);
+}
+
+.onboarding__dots {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  /* Filled past-day dots carry more visual weight than future outlines, so
+     compensate optically while keeping the row geometrically unchanged. */
+  transform: translateX(6px);
+}
+
+.onboarding__dots span {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--vkui--color_icon_secondary);
+  border-radius: 50%;
+  background: var(--vkui--color_icon_secondary);
+}
+
+.onboarding__visual .onboarding__dot--today {
+  width: 18px;
+  height: 18px;
+  border-color: var(--accent-stroke);
+  background: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-dim);
+}
+
+.onboarding__visual .onboarding__dot--future {
+  background: transparent;
+  border-color: var(--vkui--color_separator_primary);
+}
+
+.onboarding__intro {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.onboarding__intro h2,
+.onboarding__feature h3 {
+  margin: 0;
+  color: var(--vkui--color_text_primary);
+}
+
+.onboarding__intro h2 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.onboarding__intro p,
+.onboarding__feature p {
+  margin: 6px 0 0;
+  color: var(--vkui--color_text_secondary);
+  line-height: 1.45;
+}
+
+.onboarding__intro p {
+  font-size: 15px;
+}
+
+.onboarding__features {
+  display: grid;
+  gap: 18px;
+}
+
+.onboarding__feature {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.onboarding__feature-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.onboarding__feature h3 {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.onboarding__feature p {
+  font-size: 14px;
+}
+
+.onboarding__actions {
+  margin-top: 26px;
+}
+
+@media (max-width: 380px) {
+  .onboarding {
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .onboarding__visual {
+    min-height: 54px;
+    margin-bottom: 12px;
+  }
+
+  .onboarding__intro {
+    margin-bottom: 18px;
+  }
+
+  .onboarding__intro h2 {
+    font-size: 21px;
+  }
+
+  .onboarding__features {
+    gap: 14px;
+  }
+
+  .onboarding__feature p {
+    font-size: 13px;
+  }
+}

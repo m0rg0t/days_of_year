@@ -18,6 +18,10 @@ import './ExportPanel.css';
  * independent of the on-screen responsive grid and the user's density choice.
  */
 const EXPORT_LAYOUT = computeBestLayout({ width: 440 });
+const SYNC_TIME_FORMATTER = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 interface ExportPanelProps {
   viewYear: number;
@@ -48,17 +52,21 @@ async function uploadToTelegraph(blob: Blob, filename: string): Promise<string> 
 }
 
 function formatSyncState(syncState: VkSyncState): string {
-  if (syncState.status === 'saving') return 'VK Storage: сохраняем изменения...';
-  if (syncState.status === 'error') return 'VK Storage: не удалось записать, остаётся локальная копия.';
+  if (syncState.status === 'saving') return 'Сохраняем изменения…';
+  if (syncState.status === 'error') return 'Не удалось синхронизировать. Изменения сохранены на этом устройстве.';
   if (syncState.status === 'saved' && syncState.savedAt) {
-    const time = new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }).format(syncState.savedAt);
-    return `VK Storage: сохранено в ${time}.`;
+    const time = SYNC_TIME_FORMATTER.format(syncState.savedAt);
+    return `Изменения сохранены в ${time}.`;
   }
-  return 'VK Storage: синхронизация активна, записи дублируются по ключам года.';
+  return 'Изменения сохраняются автоматически.';
+}
+
+async function shareVk() {
+  try {
+    await bridge.send('VKWebAppShare', { link: window.location.href });
+  } catch {
+    // User cancelled or VK Bridge unavailable
+  }
 }
 
 export function ExportPanel({
@@ -184,14 +192,6 @@ export function ExportPanel({
     downloadText(markdownFilename, markdownText, 'text/markdown;charset=utf-8');
   }
 
-  async function shareVk() {
-    try {
-      await bridge.send('VKWebAppShare', { link: window.location.href });
-    } catch {
-      // User cancelled or VK Bridge unavailable
-    }
-  }
-
   return (
     <Group header={<Header>Экспорт</Header>}>
       {/* Sync status stays OUTSIDE the collapse — it must report VK Storage
@@ -201,6 +201,7 @@ export function ExportPanel({
       </div>
       <div className="vkui-div">
         <button
+          type="button"
           className="export-panel__toggle"
           onClick={() => setIsOpen((o) => !o)}
           aria-expanded={isOpen}
@@ -224,7 +225,7 @@ export function ExportPanel({
             </Button>
           </div>
           <div className="vkui-div small">
-            Локальная копия хранится в `localStorage`. PNG сначала сохраняется прямо на устройство; если это недоступно — на мобильных внутри VK файл выгружается через `VKWebAppDownloadFile`.
+            PNG сохранит визуальную карточку года, а Markdown — текстовый отчёт.
           </div>
           <div className="vkui-div export-panel__markdown">
             <div className="export-panel__markdown-head">{markdownFilename}</div>

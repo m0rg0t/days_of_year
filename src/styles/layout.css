@@ -95,8 +95,8 @@
 }
 
 .mobile-month-nav {
-  padding-top: 4px;
-  padding-bottom: 6px;
+  padding-top: 2px;
+  padding-bottom: 4px;
   overflow: hidden;
 }
 
@@ -104,7 +104,10 @@
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  margin: 0;
+  padding-left: 0;
   padding-bottom: 2px;
+  list-style: none;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -155,6 +158,11 @@
 .mobile-day-shortcut__meta {
   margin-top: 8px;
   text-align: center;
+}
+
+.mobile-day-shortcut {
+  padding-top: 4px;
+  padding-bottom: 12px;
 }
 
 @media (min-width: 600px) {
