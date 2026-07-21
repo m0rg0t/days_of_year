@@ -43,6 +43,7 @@ vi.mock('../vkYearStorage', async () => {
 });
 
 vi.mock('../vkAds', () => ({
+  initVkBridge: vi.fn(async () => undefined),
   showBannerAd: vi.fn(async () => ({ result: true })),
   hideBannerAd: vi.fn(async () => true),
 }));

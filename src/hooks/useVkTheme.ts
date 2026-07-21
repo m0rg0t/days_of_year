@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import bridge from '@vkontakte/vk-bridge';
 import type { ColorSchemeType } from '@vkontakte/vkui';
-import { hideBannerAd, showBannerAd } from '../vkAds';
+import { hideBannerAd, initVkBridge, showBannerAd } from '../vkAds';
 
 function toColorScheme(scheme: string): ColorSchemeType {
   if (scheme === 'space_gray' || scheme === 'vkcom_dark') return 'dark';
@@ -13,7 +13,7 @@ export function useVkTheme() {
   const [colorScheme, setColorScheme] = useState<ColorSchemeType>('dark');
 
   useEffect(() => {
-    bridge.send('VKWebAppInit').catch(() => {});
+    initVkBridge();
     bridge
       .send('VKWebAppGetConfig')
       .then((cfg) => {

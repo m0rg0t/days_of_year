@@ -21,6 +21,16 @@ describe('vkAds', () => {
     mockSend.mockReset();
   });
 
+  it('sends VKWebAppInit before the first show, and only once across shows', async () => {
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+    await showBannerAd();
+    await showBannerAd();
+    const methods = mockSend.mock.calls.map((c) => c[0]);
+    expect(methods[0]).toBe('VKWebAppInit');
+    expect(methods.filter((m) => m === 'VKWebAppInit')).toHaveLength(1);
+    expect(methods[1]).toBe('VKWebAppShowBannerAd');
+  });
+
   it('showBannerAd calls VKWebAppShowBannerAd', async () => {
     mockSend.mockResolvedValue({ result: true, banner_height: 50 } as Awaited<ReturnType<typeof bridge.send>>);
     const res = await showBannerAd({ layoutType: 'resize' });
