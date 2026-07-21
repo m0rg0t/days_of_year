@@ -10,7 +10,8 @@
  * the two relative imports below to wherever you put them.
  */
 
-import vkBridge, { AnyReceiveMethodName, VKBridgeEvent } from '@vkontakte/vk-bridge';
+import vkBridge from '@vkontakte/vk-bridge';
+import type { AnyReceiveMethodName, VKBridgeEvent } from '@vkontakte/vk-bridge';
 import { logger } from './logger';
 import { getMockResponse, MOCK_USER } from './vkBridgeMock';
 
