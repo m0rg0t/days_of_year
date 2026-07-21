@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import bridge from '@vkontakte/vk-bridge';
 import type { ColorSchemeType } from '@vkontakte/vkui';
+import { vkBridgeService, vkBridgeSubscribe } from '../vkBridge';
 import { hideBannerAd, initVkBridge, showBannerAd } from '../vkAds';
 
 function toColorScheme(scheme: string): ColorSchemeType {
@@ -14,14 +14,11 @@ export function useVkTheme() {
 
   useEffect(() => {
     initVkBridge();
-    bridge
-      .send('VKWebAppGetConfig')
-      .then((cfg) => {
-        if ('scheme' in cfg && typeof cfg.scheme === 'string') {
-          setColorScheme(toColorScheme(cfg.scheme));
-        }
-      })
-      .catch(() => {});
+    vkBridgeService.getConfig().then((cfg) => {
+      if (cfg && typeof cfg.scheme === 'string') {
+        setColorScheme(toColorScheme(cfg.scheme));
+      }
+    });
 
     const listener: import('@vkontakte/vk-bridge').VKBridgeSubscribeHandler = (e) => {
       if (e.detail.type === 'VKWebAppUpdateConfig') {
@@ -32,11 +29,11 @@ export function useVkTheme() {
       }
     };
 
-    bridge.subscribe(listener);
+    const unsubscribe = vkBridgeSubscribe(listener);
     showBannerAd({ layoutType: 'resize' }).catch(() => {});
 
     return () => {
-      bridge.unsubscribe(listener);
+      unsubscribe();
       hideBannerAd().catch(() => {});
     };
   }, []);

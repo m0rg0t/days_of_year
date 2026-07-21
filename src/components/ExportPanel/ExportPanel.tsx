@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import bridge from '@vkontakte/vk-bridge';
+import { vkBridgeService } from '../../vkBridge';
 import html2canvas from 'html2canvas';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -63,7 +63,7 @@ function formatSyncState(syncState: VkSyncState): string {
 
 async function shareVk() {
   try {
-    await bridge.send('VKWebAppShare', { link: window.location.href });
+    await vkBridgeService.share(window.location.href);
   } catch {
     // User cancelled or VK Bridge unavailable
   }
@@ -154,7 +154,10 @@ export function ExportPanel({
       if (!isDesktopWeb) {
         try {
           const url = await uploadToTelegraph(blob, filename);
-          await bridge.send('VKWebAppDownloadFile', { url, filename });
+          // The service resolves errors to null — rethrow so the existing
+          // catch falls through to the next download strategy.
+          const res = await vkBridgeService.downloadFile(url, filename);
+          if (!res?.result) throw new Error('VKWebAppDownloadFile failed');
           return;
         } catch {
           // Not on supported mobile VK platform or upload failed.

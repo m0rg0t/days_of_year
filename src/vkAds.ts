@@ -1,43 +1,21 @@
-import bridge, { BannerAdLayoutType, BannerAdLocation } from '@vkontakte/vk-bridge';
+import { initVkBridge, vkBridgeService } from './vkBridge';
 
 export type BannerLayoutType = 'resize' | 'overlay';
 
-const LAYOUT_MAP: Record<BannerLayoutType, BannerAdLayoutType> = {
-  resize: BannerAdLayoutType.RESIZE,
-  overlay: BannerAdLayoutType.OVERLAY,
-};
-
-let initPromise: Promise<void> | null = null;
-
-/**
- * Idempotent VKWebAppInit — ad calls made before init completes fail silently
- * on mobile clients, so every ad entry point awaits this first. Never rejects.
- */
-export function initVkBridge(): Promise<void> {
-  initPromise ??= bridge
-    .send('VKWebAppInit')
-    .then(() => undefined)
-    .catch(() => undefined);
-  return initPromise;
-}
+export { initVkBridge };
 
 export async function showBannerAd(opts?: { layoutType?: BannerLayoutType }) {
-  try {
-    await initVkBridge();
-    return await bridge.send('VKWebAppShowBannerAd', {
-      banner_location: BannerAdLocation.BOTTOM,
-      layout_type: LAYOUT_MAP[opts?.layoutType ?? 'resize'],
-    });
-  } catch {
-    return { result: false as const };
-  }
+  // Ad calls made before VKWebAppInit completes fail silently on mobile
+  // clients — await the (memoized) init first.
+  await initVkBridge();
+  const res = await vkBridgeService.showBannerAd({
+    banner_location: 'bottom',
+    layout_type: opts?.layoutType ?? 'resize',
+  });
+  return res ?? { result: false as const };
 }
 
 export async function hideBannerAd() {
-  try {
-    await bridge.send('VKWebAppHideBannerAd');
-    return true;
-  } catch {
-    return false;
-  }
+  const res = await vkBridgeService.hideBannerAd();
+  return res?.result ?? false;
 }

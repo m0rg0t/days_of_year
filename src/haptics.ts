@@ -1,17 +1,12 @@
-import bridge from '@vkontakte/vk-bridge';
+import { vkBridgeService } from './vkBridge';
 
-// `bridge.send` returns a Promise, so a synchronous try/catch never sees a
-// rejection (it would surface as an unhandled rejection on every tap in non-VK
-// environments). Swallow it on the promise instead.
+// The service never rejects (errors resolve to null), so fire-and-forget is
+// safe — no unhandled rejections in non-VK environments.
 
 export function hapticSelection() {
-  bridge.send('VKWebAppTapticImpactOccurred', { style: 'light' }).catch(() => {
-    // no-op: haptics unavailable
-  });
+  void vkBridgeService.tapticImpact('light');
 }
 
 export function hapticSuccess() {
-  bridge.send('VKWebAppTapticNotificationOccurred', { type: 'success' }).catch(() => {
-    // no-op: haptics unavailable
-  });
+  void vkBridgeService.tapticNotification('success');
 }

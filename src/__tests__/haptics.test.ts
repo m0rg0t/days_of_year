@@ -17,18 +17,13 @@ describe('haptics', () => {
     expect(bridge.send).toHaveBeenCalledWith('VKWebAppTapticImpactOccurred', { style: 'light' });
   });
 
-  it('hapticSelection attaches a rejection handler (no unhandled rejection)', async () => {
-    // Assert the handler is actually attached to the returned promise — this
-    // FAILS if the production .catch() is removed (a synchronous not.toThrow()
-    // assertion would not, since async rejections never throw synchronously).
-    const rejected = Promise.reject(new Error('no vk'));
-    const catchSpy = vi.spyOn(rejected, 'catch');
-    vi.mocked(bridge.send).mockReturnValue(rejected as never);
-
-    hapticSelection();
-
-    expect(catchSpy).toHaveBeenCalled();
-    await rejected.catch(() => {}); // settle to avoid leaking an unhandled rejection
+  it('hapticSelection swallows bridge failures (no unhandled rejection)', async () => {
+    // Rejection handling now lives inside vkBridgeSend (try/await/catch).
+    // Flush microtasks so an unhandled rejection — which vitest reports as a
+    // failure — would surface if that handling were removed.
+    vi.mocked(bridge.send).mockRejectedValue(new Error('no vk'));
+    expect(() => hapticSelection()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 0));
   });
 
   it('hapticSuccess sends a success notification', () => {
@@ -37,14 +32,9 @@ describe('haptics', () => {
     expect(bridge.send).toHaveBeenCalledWith('VKWebAppTapticNotificationOccurred', { type: 'success' });
   });
 
-  it('hapticSuccess attaches a rejection handler (no unhandled rejection)', async () => {
-    const rejected = Promise.reject(new Error('no vk'));
-    const catchSpy = vi.spyOn(rejected, 'catch');
-    vi.mocked(bridge.send).mockReturnValue(rejected as never);
-
-    hapticSuccess();
-
-    expect(catchSpy).toHaveBeenCalled();
-    await rejected.catch(() => {});
+  it('hapticSuccess swallows bridge failures (no unhandled rejection)', async () => {
+    vi.mocked(bridge.send).mockRejectedValue(new Error('no vk'));
+    expect(() => hapticSuccess()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 0));
   });
 });

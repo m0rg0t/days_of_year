@@ -131,8 +131,7 @@ describe('vkYearStorage', () => {
     // not yet
     expect(mockSend.mock.calls.length).toBe(0);
 
-    vi.advanceTimersByTime(650);
-    await vi.runAllTicks();
+    await vi.advanceTimersByTimeAsync(650);
 
     // Jan + Mar (the only months with data) + 1 legacy clear = 3 writes, NOT 13.
     expect(mockSend.mock.calls.length).toBe(3);
@@ -186,9 +185,7 @@ describe('vkYearStorage', () => {
 
     expect(onStateChange).toHaveBeenCalledWith({ status: 'saving' });
 
-    vi.advanceTimersByTime(650);
-    await vi.runAllTicks();
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(650);
 
     expect(onStateChange.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ status: 'saved' }));
   });
@@ -200,17 +197,14 @@ describe('vkYearStorage', () => {
     // First flush: the month write rejects.
     mockSend.mockRejectedValue(new Error('rate limit'));
     w.setYear({ '2026-05-10': { word: 'hello' } });
-    vi.advanceTimersByTime(650);
-    await vi.runAllTicks();
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(650);
     expect(onStateChange.mock.calls.at(-1)?.[0]).toEqual({ status: 'error' });
 
     // Second flush with the SAME data must retry May (it was never marked written).
     mockSend.mockReset();
     mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
     w.setYear({ '2026-05-10': { word: 'hello' } });
-    vi.advanceTimersByTime(650);
-    await vi.runAllTicks();
+    await vi.advanceTimersByTimeAsync(650);
     const keys = mockSend.mock.calls.map((c) => (c[1] as { key: string }).key);
     expect(keys).toContain('doy_2026_05');
   });

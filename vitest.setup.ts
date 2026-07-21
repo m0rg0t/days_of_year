@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 
+// Force the vkBridge service down the real-bridge path in tests: suites mock
+// '@vkontakte/vk-bridge' directly, so isDevMode() must be false (the service
+// treats a present window.vkBridge as "inside VK").
+(window as Window & { vkBridge?: unknown }).vkBridge = {};
+
 // jsdom doesn't provide ResizeObserver by default
 class ResizeObserverMock {
   private cb: ResizeObserverCallback;

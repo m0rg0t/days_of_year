@@ -14,7 +14,7 @@ import {
   View,
   ModalRoot,
 } from '@vkontakte/vkui';
-import bridge from '@vkontakte/vk-bridge';
+import { vkBridgeService } from './vkBridge';
 
 import './styles/global.css';
 import './styles/layout.css';
@@ -121,7 +121,7 @@ export default function App() {
       // form VK's ShowStoryBox examples and the previously-shipped build use.
       // (The type comment "Base64 string with BLOB" is ambiguous; confirm the
       // accepted form on a real VK client before changing this.)
-      await bridge.send('VKWebAppShowStoryBox', {
+      await vkBridgeService.showStoryBox({
         background_type: 'image',
         blob: dataUrl,
         attachment: {

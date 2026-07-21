@@ -1,4 +1,4 @@
-import bridge from '@vkontakte/vk-bridge';
+import { vkBridgeService } from './vkBridge';
 import type { Mood } from './utils';
 
 export type DayData = {
@@ -47,7 +47,7 @@ export async function loadYearBlobFromVk(year: number): Promise<Record<string, D
     const legacyKey = yearKey(year);
     const allKeys = [...monthKeys, legacyKey];
 
-    const res = await bridge.send('VKWebAppStorageGet', { keys: allKeys });
+    const res = await vkBridgeService.storageGet(allKeys);
     const items = res?.keys ?? [];
 
     // Parse monthly chunks
@@ -108,7 +108,9 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
     try {
       const groups = groupByMonth(payload);
 
-      const writes: Array<{ apply: () => void; promise: Promise<unknown> }> = [];
+      // The service resolves failures to null (it never rejects), so a write
+      // "succeeded" only when the resolved value has result:true.
+      const writes: Array<{ apply: () => void; promise: Promise<{ result: boolean } | null> }> = [];
 
       for (let month = 1; month <= 12; month++) {
         const monthDays = groups.get(month) ?? null;
@@ -117,7 +119,7 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
         if (value === (lastWritten.get(month) ?? '')) continue;
         writes.push({
           apply: () => lastWritten.set(month, value),
-          promise: bridge.send('VKWebAppStorageSet', { key: monthKey(year, month), value }),
+          promise: vkBridgeService.storageSet(monthKey(year, month), value),
         });
       }
 
@@ -125,7 +127,7 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
       if (!legacyCleared) {
         writes.push({
           apply: () => { legacyCleared = true; },
-          promise: bridge.send('VKWebAppStorageSet', { key: yearKey(year), value: '' }),
+          promise: vkBridgeService.storageSet(yearKey(year), ''),
         });
       }
 
@@ -139,7 +141,7 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
       const results = await Promise.allSettled(writes.map((w) => w.promise));
       let anyFailed = false;
       results.forEach((res, i) => {
-        if (res.status === 'fulfilled') writes[i].apply();
+        if (res.status === 'fulfilled' && res.value?.result) writes[i].apply();
         else anyFailed = true;
       });
 
