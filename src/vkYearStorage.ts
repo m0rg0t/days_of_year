@@ -88,6 +88,7 @@ function groupByMonth(days: Record<string, DayData>): Map<number, Record<string,
 
 type VkYearBlobWriterOptions = {
   onStateChange?: (state: VkSyncState) => void;
+  initialDays?: Record<string, DayData>;
 };
 
 export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOptions = {}) {
@@ -97,6 +98,9 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
   // re-sends months whose content actually changed (instead of 13 writes per
   // edit, which would hammer VK Storage's per-user write rate limit).
   const lastWritten = new Map<number, string>();
+  // A first edit after reload may remove an existing remote month. Such a
+  // month must be cleared even though this writer has not saved it yet.
+  const initialMonths = new Set(groupByMonth(options.initialDays ?? {}).keys());
   let legacyCleared = false;
   let flushing = false;
 
@@ -119,7 +123,8 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
         const monthDays = groups.get(month) ?? null;
         const value = monthDays ? JSON.stringify(monthDays) : '';
         // Skip unchanged months (including empty months never written before).
-        if (value === (lastWritten.get(month) ?? '')) continue;
+        const needsInitialClear = value === '' && initialMonths.has(month) && !lastWritten.has(month);
+        if (!needsInitialClear && value === (lastWritten.get(month) ?? '')) continue;
         writes.push({
           apply: () => lastWritten.set(month, value),
           promise: vkBridgeService.storageSet(monthKey(year, month), value),

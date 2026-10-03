@@ -1,3 +1,4 @@
+import { createElement, StrictMode } from 'react';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const storage = vi.hoisted(() => ({ load: vi.fn(), write: vi.fn() }));
@@ -20,7 +21,7 @@ it('never writes cloud after an unconfirmed read', async () => {
 it('retains a pending edit and untouched cloud history before writing', async () => {
   let resolve!: (value: unknown) => void;
   storage.load.mockReturnValue(new Promise((done) => { resolve = done; }));
-  const { result } = renderHook(() => useYearView());
+  const { result } = renderHook(() => useYearView(), { wrapper: ({ children }) => createElement(StrictMode, null, children) });
   act(() => result.current.updateDay('2026-01-30', { word: 'new' }));
   expect(storage.write).not.toHaveBeenCalled();
   await act(async () => { resolve({ confirmed: true, days: { '2026-01-01': { word: 'cloud' }, '2026-01-30': { word: 'old' } } }); });

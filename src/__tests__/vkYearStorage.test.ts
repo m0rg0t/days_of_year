@@ -280,3 +280,15 @@ it('marks incomplete cloud reads unconfirmed and confirms every requested key', 
   mockSend.mockResolvedValueOnce({ keys: [...Array.from({ length: 12 }, (_, i) => monthKey(2026, i + 1)), yearKey(2026)].map((key) => ({ key, value: '' })) } as Awaited<ReturnType<typeof bridge.send>>);
   expect(await loadYearBlobWithStatusFromVk(2026)).toEqual({ days: {}, confirmed: true });
 });
+
+it('clears a pre-existing remote month when the first edit after reload deletes its last day', async () => {
+  vi.useFakeTimers();
+  mockSend.mockReset();
+  mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+  const writer = createVkYearBlobWriter(2026, { initialDays: { '2026-01-01': { word: 'existing' } } });
+  writer.setYear({});
+  await vi.advanceTimersByTimeAsync(650);
+  expect(mockSend.mock.calls.map((call) => call[1])).toEqual([
+    { key: 'doy_2026_01', value: '' }, { key: 'doy_2026', value: '' },
+  ]);
+});

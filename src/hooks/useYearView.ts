@@ -111,19 +111,24 @@ export function useYearView(): UseYearViewResult {
         return;
       }
       cloudReadyRef.current = true;
+      const editedKeys = new Set(dirtyKeysRef.current);
+      dirtyKeysRef.current.clear();
+      vkYearWriterRef.current = createVkYearBlobWriter(viewYear, {
+        onStateChange: setVkSyncState,
+        initialDays: snapshot.days,
+      });
       setStore((prev) => {
         const localDays = getYearDays(prev.days, viewYear);
         const days = { ...localDays, ...snapshot.days };
         // Edits made while the read was outstanding take priority, including
         // deletions, while untouched cloud days are preserved.
-        for (const key of dirtyKeysRef.current) {
+        for (const key of editedKeys) {
           if (localDays[key]) days[key] = localDays[key];
           else delete days[key];
         }
         const merged = replaceYearDays(prev, viewYear, days);
         saveStore(merged);
-        if (dirtyKeysRef.current.size) vkYearWriterRef.current.setYear(days);
-        dirtyKeysRef.current.clear();
+        if (editedKeys.size) vkYearWriterRef.current.setYear(days);
         return merged;
       });
     })();
