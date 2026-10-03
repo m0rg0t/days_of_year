@@ -229,3 +229,66 @@ describe('vkYearStorage', () => {
     expect((janClear![1] as { value: string }).value).toBe('');
   });
 });
+
+
+describe('migration recovery', () => {
+  beforeEach(() => { vi.useFakeTimers(); mockSend.mockReset(); });
+
+  it('recovers legacy months after a partially completed monthly migration', async () => {
+    mockSend.mockResolvedValue({ keys: [
+      { key: 'doy_2026', value: JSON.stringify({ '2026-01-01': { word: 'old' }, '2026-01-02': { word: 'removed' }, '2026-02-01': { word: 'keep' } }) },
+      { key: 'doy_2026_01', value: JSON.stringify({ '2026-01-01': { word: 'updated' } }) },
+    ] } as Awaited<ReturnType<typeof bridge.send>>);
+    expect(await loadYearBlobFromVk(2026)).toEqual({ '2026-01-01': { word: 'updated' }, '2026-02-01': { word: 'keep' } });
+  });
+
+  it('keeps legacy data when one monthly write fails, then clears it after retry', async () => {
+    mockSend.mockImplementation(async (_method, params) => (params as { key: string }).key === 'doy_2026_02' ? { result: false } : { result: true });
+    const writer = createVkYearBlobWriter(2026);
+    const data = { '2026-01-01': { word: 'first' }, '2026-02-01': { word: 'second' } };
+    writer.setYear(data);
+    await vi.advanceTimersByTimeAsync(650);
+    expect(mockSend.mock.calls.some((call) => (call[1] as { key: string }).key === 'doy_2026')).toBe(false);
+    mockSend.mockReset();
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+    writer.setYear(data);
+    await vi.advanceTimersByTimeAsync(650);
+    expect(mockSend.mock.calls.map((call) => (call[1] as { key: string }).key)).toEqual(['doy_2026_02', 'doy_2026']);
+  });
+
+  it('serializes a newer edit behind the outstanding write', async () => {
+    let resolveFirst!: (value: { result: boolean }) => void;
+    mockSend.mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }) as ReturnType<typeof bridge.send>);
+    mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+    const writer = createVkYearBlobWriter(2026);
+    writer.setYear({ '2026-01-01': { word: 'old' } });
+    await vi.advanceTimersByTimeAsync(600);
+    writer.setYear({ '2026-01-01': { word: 'new' } });
+    await vi.advanceTimersByTimeAsync(600);
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    resolveFirst({ result: true });
+    await vi.advanceTimersByTimeAsync(650);
+    const last = mockSend.mock.calls.at(-1)!;
+    expect(JSON.parse((last[1] as { value: string }).value)).toEqual({ '2026-01-01': { word: 'new' } });
+  });
+});
+
+it('marks incomplete cloud reads unconfirmed and confirms every requested key', async () => {
+  const { loadYearBlobWithStatusFromVk } = await import('../vkYearStorage');
+  mockSend.mockResolvedValueOnce({ keys: [] } as Awaited<ReturnType<typeof bridge.send>>);
+  expect((await loadYearBlobWithStatusFromVk(2026)).confirmed).toBe(false);
+  mockSend.mockResolvedValueOnce({ keys: [...Array.from({ length: 12 }, (_, i) => monthKey(2026, i + 1)), yearKey(2026)].map((key) => ({ key, value: '' })) } as Awaited<ReturnType<typeof bridge.send>>);
+  expect(await loadYearBlobWithStatusFromVk(2026)).toEqual({ days: {}, confirmed: true });
+});
+
+it('clears a pre-existing remote month when the first edit after reload deletes its last day', async () => {
+  vi.useFakeTimers();
+  mockSend.mockReset();
+  mockSend.mockResolvedValue({ result: true } as Awaited<ReturnType<typeof bridge.send>>);
+  const writer = createVkYearBlobWriter(2026, { initialDays: { '2026-01-01': { word: 'existing' } } });
+  writer.setYear({});
+  await vi.advanceTimersByTimeAsync(650);
+  expect(mockSend.mock.calls.map((call) => call[1])).toEqual([
+    { key: 'doy_2026_01', value: '' }, { key: 'doy_2026', value: '' },
+  ]);
+});

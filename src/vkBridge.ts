@@ -44,25 +44,27 @@ export async function vkBridgeSend<T>(
 ): Promise<T | null> {
   const { timeout = 5000, mockDelay = 150 } = options;
 
-  if (isDevMode()) {
-    await new Promise((resolve) => setTimeout(resolve, mockDelay));
-    return getMockResponse<T>(method, params);
-  }
-
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
+    if (isDevMode()) {
+      await new Promise((resolve) => setTimeout(resolve, mockDelay));
+      return getMockResponse<T>(method, params);
+    }
     const shouldTimeout = typeof timeout === 'number' && timeout > 0;
     if (shouldTimeout) {
       return await Promise.race([
         vkBridge.send(method as never, params as never) as Promise<T>,
-        new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error(`VK Bridge timeout: ${method}`)), timeout)
-        ),
+        new Promise<null>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`VK Bridge timeout: ${method}`)), timeout);
+        }),
       ]);
     }
     return await (vkBridge.send(method as never, params as never) as Promise<T>);
   } catch (error) {
     logger.error(`[VK Bridge] Error in ${method}:`, error);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -164,11 +166,12 @@ export function initVkBridge(): Promise<void> {
       return;
     }
     try {
-      await vkBridge.send('VKWebAppInit');
-      logger.log('[VK Bridge] Initialized');
+      const initialized = await vkBridgeSend('VKWebAppInit');
+      if (initialized) logger.log('[VK Bridge] Initialized');
     } catch (error) {
       logger.error('[VK Bridge] Init error:', error);
     }
   })();
   return initPromise;
 }
+

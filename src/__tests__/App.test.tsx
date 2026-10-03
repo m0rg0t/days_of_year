@@ -37,7 +37,10 @@ vi.mock('../vkYearStorage', async () => {
   const actual = await vi.importActual<typeof import('../vkYearStorage')>('../vkYearStorage');
   return {
     ...actual,
-    loadYearBlobFromVk: loadYearBlobFromVkMock,
+    loadYearBlobWithStatusFromVk: async (year: number) => {
+      const days = await loadYearBlobFromVkMock(year);
+      return { days: days ?? {}, confirmed: days !== undefined && days !== null };
+    },
     createVkYearBlobWriter: vi.fn(() => ({ setYear: setYearMock })),
   };
 });
@@ -180,7 +183,8 @@ describe('App', () => {
       return el;
     });
 
-    render(<App />);
+    loadYearBlobFromVkMock.mockResolvedValueOnce({});
+    await act(async () => { render(<App />); });
 
     // mood buttons should be visible for today
     fireEvent.click(screen.getByTestId('mood-blue'));
@@ -672,7 +676,8 @@ describe('App', () => {
     ).toBe(true);
   });
 
-  it('writes only current year data to VK Storage writer', () => {
+  it('writes only current year data to VK Storage writer', async () => {
+    loadYearBlobFromVkMock.mockResolvedValueOnce({});
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-30T12:00:00Z'));
 
@@ -685,7 +690,7 @@ describe('App', () => {
       },
     }));
 
-    render(<App />);
+    await act(async () => { render(<App />); });
 
     const input = screen.getByPlaceholderText('одно слово') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'updated' } });
@@ -696,3 +701,4 @@ describe('App', () => {
     expect(setYearMock.mock.calls.at(-1)?.[0]).not.toHaveProperty('2025-12-31');
   });
 });
+

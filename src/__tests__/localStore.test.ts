@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { emptyStore, getYearDays, loadStore, patchStoreDay, replaceYearDays, saveStore, STORAGE_KEY } from '../localStore';
 
 describe('localStore', () => {
@@ -81,4 +81,20 @@ describe('localStore', () => {
     const next = patchStoreDay(store, '2026-01-01', { word: '' });
     expect(next.days['2026-01-01']).toBeUndefined();
   });
+});
+
+
+it('rejects incomplete or array-shaped stored day maps', () => {
+  for (const days of [undefined, null, [], 'invalid']) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, year: 2026, days }));
+    expect(loadStore(2026)).toEqual(emptyStore(2026));
+  }
+});
+
+it('blocked browser storage does not throw away the in-memory edit', () => {
+  const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+  const store = { ...emptyStore(2026), days: { '2026-01-01': { word: 'synthetic' } } };
+  expect(saveStore(store)).toBe(false);
+  expect(store.days['2026-01-01'].word).toBe('synthetic');
+  setItem.mockRestore();
 });

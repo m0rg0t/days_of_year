@@ -17,10 +17,10 @@ export function daysInYear(year: number): number {
 }
 
 export function dayOfYear(d: Date): number {
-  const start = new Date(d.getFullYear(), 0, 0);
-  const diff = d.getTime() - start.getTime();
-  const oneDay = 1000 * 60 * 60 * 24;
-  return Math.floor(diff / oneDay);
+  // Count local calendar dates, not elapsed hours: DST days may be 23/25 hours.
+  const day = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const start = Date.UTC(d.getFullYear(), 0, 0);
+  return Math.round((day - start) / 86_400_000);
 }
 
 function pad2(n: number): string {
@@ -69,3 +69,4 @@ export function downloadText(filename: string, text: string, mimeType = 'text/pl
   a.remove();
   URL.revokeObjectURL(url);
 }
+

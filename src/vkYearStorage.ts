@@ -29,7 +29,7 @@ function safeParse(raw: string | undefined | null): Record<string, DayData> | nu
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Record<string, DayData>;
-    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
     return parsed;
   } catch {
     return null;
@@ -42,35 +42,36 @@ function safeParse(raw: string | undefined | null): Record<string, DayData> | nu
  * If monthly keys have data, uses them. Otherwise falls back to legacy key (migration).
  */
 export async function loadYearBlobFromVk(year: number): Promise<Record<string, DayData>> {
+  return (await loadYearBlobWithStatusFromVk(year)).days;
+}
+
+export async function loadYearBlobWithStatusFromVk(year: number): Promise<{ days: Record<string, DayData>; confirmed: boolean }> {
   try {
     const monthKeys = Array.from({ length: 12 }, (_, i) => monthKey(year, i + 1));
     const legacyKey = yearKey(year);
     const allKeys = [...monthKeys, legacyKey];
 
     const res = await vkBridgeService.storageGet(allKeys);
-    const items = res?.keys ?? [];
+    const items = Array.isArray(res?.keys) ? res.keys : [];
+    const confirmed = allKeys.every((key) => items.some((item) => item?.key === key && typeof item.value === 'string'));
 
-    // Parse monthly chunks
-    const merged: Record<string, DayData> = {};
-    let hasMonthlyData = false;
-
-    for (const mk of monthKeys) {
-      const item = items.find((it) => it.key === mk);
+    // A previous migration may have written only some months. Preserve all
+    // unmigrated legacy months; a completed monthly chunk replaces that month.
+    const legacyItem = items.find((it) => it?.key === legacyKey);
+    const merged = { ...(safeParse(legacyItem?.value) ?? {}) };
+    for (const [index, mk] of monthKeys.entries()) {
+      const item = items.find((it) => it?.key === mk);
       const parsed = safeParse(item?.value);
-      if (parsed) {
-        hasMonthlyData = true;
-        Object.assign(merged, parsed);
+      if (!parsed) continue;
+      const prefix = `${year}-${String(index + 1).padStart(2, '0')}-`;
+      for (const key of Object.keys(merged)) {
+        if (key.startsWith(prefix)) delete merged[key];
       }
+      Object.assign(merged, parsed);
     }
-
-    if (hasMonthlyData) return merged;
-
-    // Fallback: legacy single-blob key (pre-migration data)
-    const legacyItem = items.find((it) => it.key === legacyKey);
-    const legacyParsed = safeParse(legacyItem?.value);
-    return legacyParsed ?? {};
+    return { days: merged, confirmed };
   } catch {
-    return {};
+    return { days: {}, confirmed: false };
   }
 }
 
@@ -87,6 +88,7 @@ function groupByMonth(days: Record<string, DayData>): Map<number, Record<string,
 
 type VkYearBlobWriterOptions = {
   onStateChange?: (state: VkSyncState) => void;
+  initialDays?: Record<string, DayData>;
 };
 
 export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOptions = {}) {
@@ -96,11 +98,16 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
   // re-sends months whose content actually changed (instead of 13 writes per
   // edit, which would hammer VK Storage's per-user write rate limit).
   const lastWritten = new Map<number, string>();
+  // A first edit after reload may remove an existing remote month. Such a
+  // month must be cleared even though this writer has not saved it yet.
+  const initialMonths = new Set(groupByMonth(options.initialDays ?? {}).keys());
   let legacyCleared = false;
+  let flushing = false;
 
   async function flush() {
     timer = null;
-    if (!pending) return;
+    if (!pending || flushing) return;
+    flushing = true;
 
     const payload = pending;
     pending = null;
@@ -116,24 +123,12 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
         const monthDays = groups.get(month) ?? null;
         const value = monthDays ? JSON.stringify(monthDays) : '';
         // Skip unchanged months (including empty months never written before).
-        if (value === (lastWritten.get(month) ?? '')) continue;
+        const needsInitialClear = value === '' && initialMonths.has(month) && !lastWritten.has(month);
+        if (!needsInitialClear && value === (lastWritten.get(month) ?? '')) continue;
         writes.push({
           apply: () => lastWritten.set(month, value),
           promise: vkBridgeService.storageSet(monthKey(year, month), value),
         });
-      }
-
-      // Clear the legacy whole-year key once (migration), not on every flush.
-      if (!legacyCleared) {
-        writes.push({
-          apply: () => { legacyCleared = true; },
-          promise: vkBridgeService.storageSet(yearKey(year), ''),
-        });
-      }
-
-      if (writes.length === 0) {
-        options.onStateChange?.({ status: 'saved', savedAt: Date.now() });
-        return;
       }
 
       // allSettled so one throttled/failed write doesn't discard the others;
@@ -145,12 +140,23 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
         else anyFailed = true;
       });
 
+      // Clear legacy only after every monthly write is confirmed. Clearing it
+      // concurrently could permanently discard a throttled/failed month.
+      if (!anyFailed && !legacyCleared) {
+        const cleared = await vkBridgeService.storageSet(yearKey(year), '');
+        legacyCleared = cleared?.result === true;
+        anyFailed = !legacyCleared;
+      }
       options.onStateChange?.(
-        anyFailed ? { status: 'error' } : { status: 'saved', savedAt: Date.now() },
+        anyFailed ? { status: 'error' } : pending ? { status: 'saving' } : { status: 'saved', savedAt: Date.now() },
       );
     } catch {
       options.onStateChange?.({ status: 'error' });
       // ignore: localStorage remains fallback
+    } finally {
+      flushing = false;
+      // Serialize writes so an older slow save cannot overwrite a newer edit.
+      if (pending && timer === null) timer = window.setTimeout(flush, 600);
     }
   }
 
@@ -169,3 +175,4 @@ export function createVkYearBlobWriter(year: number, options: VkYearBlobWriterOp
     },
   };
 }
+

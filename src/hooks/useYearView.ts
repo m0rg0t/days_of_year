@@ -4,7 +4,7 @@ import { getEarnedBadges } from '../badges';
 import { getYearDays, loadStore, patchStoreDay, replaceYearDays, saveStore } from '../localStore';
 import { computeYearStats } from '../stats';
 import { dateKeyForDayIndex, dayOfYear, daysInYear, monthStartIndices } from '../utils';
-import { createVkYearBlobWriter, loadYearBlobFromVk } from '../vkYearStorage';
+import { createVkYearBlobWriter, loadYearBlobWithStatusFromVk } from '../vkYearStorage';
 import type { DayData, VkSyncState } from '../vkYearStorage';
 
 type MonthQuickJump = {
@@ -56,6 +56,8 @@ export function useYearView(): UseYearViewResult {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(realTodayIndex);
   const [vkSyncState, setVkSyncState] = useState<VkSyncState>({ status: 'idle' });
 
+  const cloudReadyRef = useRef(false);
+  const dirtyKeysRef = useRef(new Set<string>());
   const vkYearWriterRef = useRef(
     createVkYearBlobWriter(currentYear, { onStateChange: setVkSyncState }),
   );
@@ -94,23 +96,43 @@ export function useYearView(): UseYearViewResult {
     setStore(loadStore(year));
     setSelectedDayIndex(year === currentYear ? realTodayIndex : 1);
     setVkSyncState({ status: 'idle' });
+    cloudReadyRef.current = false;
+    dirtyKeysRef.current = new Set();
     vkYearWriterRef.current = createVkYearBlobWriter(year, { onStateChange: setVkSyncState });
   }, [currentYear, realTodayIndex]);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      const vkDays = await loadYearBlobFromVk(viewYear);
-      if (Object.keys(vkDays).length === 0) return;
-
+      const snapshot = await loadYearBlobWithStatusFromVk(viewYear);
+      if (cancelled) return;
+      if (!snapshot.confirmed) {
+        setVkSyncState({ status: 'error' });
+        return;
+      }
+      cloudReadyRef.current = true;
+      const editedKeys = new Set(dirtyKeysRef.current);
+      dirtyKeysRef.current.clear();
+      vkYearWriterRef.current = createVkYearBlobWriter(viewYear, {
+        onStateChange: setVkSyncState,
+        initialDays: snapshot.days,
+      });
       setStore((prev) => {
-        const merged = replaceYearDays(prev, viewYear, {
-          ...getYearDays(prev.days, viewYear),
-          ...vkDays,
-        });
+        const localDays = getYearDays(prev.days, viewYear);
+        const days = { ...localDays, ...snapshot.days };
+        // Edits made while the read was outstanding take priority, including
+        // deletions, while untouched cloud days are preserved.
+        for (const key of editedKeys) {
+          if (localDays[key]) days[key] = localDays[key];
+          else delete days[key];
+        }
+        const merged = replaceYearDays(prev, viewYear, days);
         saveStore(merged);
+        if (editedKeys.size) vkYearWriterRef.current.setYear(days);
         return merged;
       });
     })();
+    return () => { cancelled = true; };
   }, [viewYear]);
 
   const goToToday = useCallback(() => {
@@ -142,7 +164,8 @@ export function useYearView(): UseYearViewResult {
     setStore((prev) => {
       const next = patchStoreDay(prev, key, patch);
       saveStore(next);
-      vkYearWriterRef.current.setYear(getYearDays(next.days, viewYear));
+      if (cloudReadyRef.current) vkYearWriterRef.current.setYear(getYearDays(next.days, viewYear));
+      else dirtyKeysRef.current.add(key);
       return next;
     });
   }, [viewYear]);
@@ -176,3 +199,4 @@ export function useYearView(): UseYearViewResult {
     updateDay,
   };
 }
+
