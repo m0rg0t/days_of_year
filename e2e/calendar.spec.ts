@@ -1,0 +1,30 @@
+import { test, expect } from '@playwright/test';
+
+test('calendar editing survives modal closure, breakpoint changes and reload', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.route('**/*', (route) => new URL(route.request().url()).origin === 'http://127.0.0.1:4173' ? route.continue() : route.abort());
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Начать отмечать дни' }).click();
+  await expect(page.getByTestId('onboarding')).toBeHidden();
+  await page.getByRole('button', { name: 'Открыть', exact: true }).click();
+  await page.getByTestId('mood-green').click();
+  await page.getByPlaceholder('одно слово').fill('Тест');
+  await expect(page.getByPlaceholder('одно слово')).toHaveValue('Тест');
+  await page.screenshot({ path: testInfo.outputPath('mobile-calendar.png') });
+  await page.getByRole('button', { name: 'Готово', exact: true }).click();
+  await expect(page.getByPlaceholder('одно слово')).toBeHidden();
+  await page.getByRole('button', { name: 'Открыть', exact: true }).click();
+  await expect(page.getByPlaceholder('одно слово')).toHaveValue('Тест');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.getByRole('button', { name: 'Готово', exact: true })).toBeHidden();
+  await expect(page.getByPlaceholder('одно слово')).toHaveValue('Тест');
+  await page.screenshot({ path: testInfo.outputPath('desktop-calendar.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByPlaceholder('одно слово')).toBeHidden();
+  await page.reload();
+  await expect(page.getByTestId('onboarding')).toBeHidden();
+  await page.getByRole('button', { name: 'Открыть', exact: true }).click();
+  await expect(page.getByPlaceholder('одно слово')).toHaveValue('Тест');
+  expect(errors).toEqual([]);
+});

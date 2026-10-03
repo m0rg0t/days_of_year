@@ -18,7 +18,7 @@ export function loadStore(year: number): Store {
     if (!raw) return emptyStore(year);
 
     const parsed = JSON.parse(raw) as Store;
-    if (!parsed || parsed.version !== 1) return emptyStore(year);
+    if (!parsed || parsed.version !== 1 || !parsed.days || typeof parsed.days !== 'object' || Array.isArray(parsed.days)) return emptyStore(year);
 
     // Keep historical data even if year changes
     return { ...parsed, year };
@@ -28,7 +28,13 @@ export function loadStore(year: number): Store {
 }
 
 export function saveStore(store: Store) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    return true;
+  } catch {
+    // Keep the in-memory edit and VK sync usable when browser storage is blocked/full.
+    return false;
+  }
 }
 
 export function getYearDays(days: Record<string, DayData>, year: number): Record<string, DayData> {
@@ -78,3 +84,4 @@ export function patchStoreDay(store: Store, key: string, patch: Partial<DayData>
     days: nextDays,
   };
 }
+

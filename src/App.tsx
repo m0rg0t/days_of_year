@@ -44,6 +44,7 @@ export default function App() {
     hasSeenOnboarding() ? null : ONBOARDING_MODAL
   ));
   const isDesktop = useIsDesktop();
+  const [previousDesktop, setPreviousDesktop] = useState(isDesktop);
   // On roomy desktop columns, let the grid grow wider but keep dots capped so
   // it reads as a dense, centered block instead of leaving a void to the right.
   const { gridRef, gridLayout } = useGridLayout(
@@ -84,9 +85,11 @@ export default function App() {
     saveGridDensity(gridDensity);
   }, [gridDensity]);
 
-  useEffect(() => {
+  // Adjust modal state with the breakpoint change before rendering children.
+  if (isDesktop !== previousDesktop) {
+    setPreviousDesktop(isDesktop);
     if (isDesktop && activeModal === DAY_DETAIL_MODAL) setActiveModal(null);
-  }, [isDesktop, activeModal]);
+  }
 
   const gridHint = isDesktop
     ? 'Нажмите на день, чтобы открыть карточку справа.'
@@ -246,3 +249,4 @@ export default function App() {
     </ConfigProvider>
   );
 }
+

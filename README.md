@@ -102,3 +102,29 @@ Minimalist app icon, 256x256, rounded corners. Dark background with soft purple 
 Center: a 5x5 mosaic of small rounded squares in blue, green, yellow, and red pastels —
 representing mood colors. One square glows brighter. Flat vector style, no text, VK aesthetic.
 ```
+
+
+## Maintenance validation (October 2026)
+
+Use Node.js 24 LTS (24.15 or later; `.nvmrc` selects 24) and `npm ci`.
+The stack uses React 19.3, VKUI 8.4, Bridge 3, Vite 8, Vitest 5 and ESLint 10.
+TypeScript stays on 6.0.3 because typescript-eslint currently requires `<6.1.0`;
+Node type definitions stay on the matching 24 branch.
+
+`npm run check` runs lint, typecheck/build and the existing coverage gate
+(90% lines/functions/statements, 80% branches). `npm run test:timezone` also
+checks calendar arithmetic in America/New_York across daylight-saving changes.
+`npm run test:e2e` covers mobile editing, modal closure, desktop/mobile resizing
+and reloading with synthetic local/Bridge storage; install Chromium with
+`npx playwright install chromium` first. CI retains responsive screenshots.
+
+VK year migration keeps the legacy record until all monthly writes succeed,
+recovers unmigrated months, and serializes outstanding writes. A failed or
+incomplete cloud read cannot authorize a write; local edits remain usable.
+Edits made during hydration take priority over the older snapshot, and late
+responses from a previous year are ignored. Native init calls are bounded.
+
+PR CI uses `contents: read`, synthetic data and no deployment credentials.
+Existing GitHub Pages publishing triggers remain limited to main/manual runs;
+no deployment was performed for this maintenance work. Validate native VK ads,
+sharing, storage and mobile client behavior before a release.

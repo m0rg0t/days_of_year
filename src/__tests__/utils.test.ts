@@ -73,3 +73,11 @@ describe('utils', () => {
     expect(map.get(61)).toBe('Мар');
   });
 });
+
+
+it('counts calendar days consistently through DST at local midnight', () => {
+  expect(dayOfYear(new Date(2026, 2, 9, 0, 0))).toBe(68);
+  expect(dayOfYear(new Date(2026, 6, 1, 0, 0))).toBe(182);
+  expect(dayOfYear(new Date(2026, 10, 2, 0, 0))).toBe(306);
+  expect(monthStartIndices(2026).get(182)).toBe('Июл');
+});
